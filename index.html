@@ -84,7 +84,7 @@
     
     <!-- Top Summary Banner -->
     <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
-      Total opening quantity as of 01/10/2026 was <span id="bannerQty">272,750.84</span> &nbsp;|&nbsp; Total opening amount was SAR <span id="bannerAmt">796,973.12</span>
+      Total opening quantity as of 01/10/2026 was <span id="bannerQty">1,74,404.00</span> &nbsp;|&nbsp; Total opening amount was SAR <span id="bannerAmt">77,669.49</span>
     </div>
 
     <!-- Company Header Navbar -->
@@ -186,24 +186,24 @@
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Movement Type</label>
-              <select id="txType" class="form-select form-select-sm">
-                <option value="INBOUND">INBOUND (وارد)</option>
-                <option value="OUTBOUND">OUTBOUND (صادر)</option>
+              <select id="txType" class="form-select form-select-sm" onchange="togglePriceField()">
+                <option value="INBOUND">INBOUND (وارد - Invoiced)</option>
+                <option value="OUTBOUND">OUTBOUND (صادر - Returning)</option>
               </select>
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Quantity</label>
               <input type="number" id="txQty" class="form-control form-control-sm" placeholder="100" required>
             </div>
-            <div class="col-md-2">
-              <label class="form-label small fw-semibold">Unit Price / Value (SAR)</label>
-              <input type="number" step="0.01" id="txPrice" class="form-control form-control-sm" placeholder="25.00" required>
+            <div class="col-md-3" id="invoiceAmountContainer">
+              <label class="form-label small fw-semibold">Total Incoming Invoice Amount (SAR)</label>
+              <input type="number" step="0.01" id="txInvoiceAmt" class="form-control form-control-sm" placeholder="2500.00">
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label class="form-label small fw-semibold">Cost Centre (مركز تكلفة)</label>
               <input type="text" id="txCostCentre" class="form-control form-control-sm" value="Main WH" required>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+            <div class="col-md-3 d-flex align-items-end">
               <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
             </div>
           </form>
@@ -325,6 +325,16 @@
       document.getElementById('newOpenAmt').value = 0.00;
       var myModal = new bootstrap.Modal(document.getElementById('addItemModal'));
       myModal.show();
+    }
+
+    function togglePriceField() {
+      const type = document.getElementById('txType').value;
+      const container = document.getElementById('invoiceAmountContainer');
+      if (type === 'OUTBOUND') {
+        container.style.display = 'none';
+      } else {
+        container.style.display = 'block';
+      }
     }
 
     function jumpToTransactions(code) {
@@ -454,8 +464,8 @@
       e.preventDefault();
       const code = document.getElementById('txItemCode').value;
       const type = document.getElementById('txType').value;
-      const qty = parseFloat(document.getElementById('txQty').value);
-      const price = parseFloat(document.getElementById('txPrice').value);
+      const qty = parseFloat(document.getElementById('txQty').value) || 0;
+      const invoiceAmt = parseFloat(document.getElementById('txInvoiceAmt').value) || 0;
       const costCentre = document.getElementById('txCostCentre').value;
 
       const found = inventoryCatalog.find(i => i.code === code);
@@ -463,11 +473,24 @@
       const openQty = found ? found.openQty : 0;
       const openAmt = found ? found.openAmt : 0;
 
+      // If INBOUND, add invoice amount to opening amount / valuation
+      if (type === 'INBOUND' && invoiceAmt > 0) {
+        if (found) {
+          found.openAmt = (parseFloat(found.openAmt) || 0) + invoiceAmt;
+          found.openQty = (parseFloat(found.openQty) || 0) + qty;
+          found.receivedQty = (parseFloat(found.receivedQty) || found.openQty) + qty;
+        }
+      } else if (type === 'OUTBOUND') {
+        if (found) {
+          found.outQty = (parseFloat(found.outQty) || 0) + qty;
+        }
+      }
+
       const newTx = {
         code: code,
         desc: desc,
-        openQty: openQty,
-        openAmt: openAmt,
+        openQty: found ? found.openQty : openQty,
+        openAmt: found ? found.openAmt : openAmt,
         date: new Date().toISOString().split('T')[0],
         voucher: 'V-' + Math.floor(1000 + Math.random() * 9000),
         inQty: type === 'INBOUND' ? qty : 0,
@@ -476,14 +499,10 @@
       };
 
       transactions.push(newTx);
-      if (found) {
-        if (type === 'OUTBOUND') found.outQty = (parseFloat(found.outQty) || 0) + qty;
-        if (type === 'INBOUND') found.receivedQty = (parseFloat(found.receivedQty) || found.openQty) + qty;
-      }
-
       renderAll();
       document.getElementById('txForm').reset();
-      alert('Transaction successfully recorded!');
+      togglePriceField();
+      alert('Transaction movement successfully recorded and automatically updated!');
     }
 
     function renderContributionChart() {
