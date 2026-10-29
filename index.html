@@ -1,592 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Soie — Intimates, made to feel like yours</title>
-<meta name="description" content="Soie is an intimate apparel studio designing bras, panties and sets for everyday comfort and quiet confidence.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ivory:#F7F3EF; --ivory-deep:#F1EAE2; --espresso:#2A211C; --espresso-soft:#5A4E47;
-  --rose:#C48793; --rose-deep:#A5677A; --sand:#EFE6DC; --sand-deep:#E3D6C7; --line:#DDD2C7; --max-w:1180px;
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--ivory);color:var(--espresso);font-family:'Sora',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:'Fraunces',serif;font-weight:500;line-height:1.08;margin:0;letter-spacing:-0.01em}
-p{margin:0}
-a{color:inherit;text-decoration:none}
-a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--rose-deep);outline-offset:3px}
-[hidden]{display:none!important}
-.wrap{max-width:var(--max-w);margin:0 auto;padding:0 32px}
-.muted{color:var(--espresso-soft)}
-.eyebrow{font-family:'Fraunces',serif;font-style:italic;color:var(--rose-deep);font-size:.95rem;margin-bottom:12px}
-
-/* Header */
-.utility-bar{border-bottom:1px solid var(--line);background:var(--ivory-deep)}
-.utility-bar .wrap{display:flex;justify-content:flex-end;gap:28px;padding-top:10px;padding-bottom:10px;font-size:.78rem;letter-spacing:.03em;color:var(--espresso-soft)}
-.utility-bar a:hover{color:var(--rose-deep)}
-.main-header .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:22px;padding-bottom:22px}
-.logo{font-family:'Fraunces',serif;font-style:italic;font-size:1.6rem;font-weight:500;letter-spacing:.02em}
-.primary-nav{display:flex;gap:36px;font-size:.92rem}
-.primary-nav a{position:relative;padding-bottom:4px}
-.primary-nav a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:0;background:var(--rose-deep);transition:width .2s ease}
-.primary-nav a:hover::after,.primary-nav a.active::after{width:100%}
-.nav-toggle{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--espresso)}
-
-/* Placeholder imagery */
-.swatch{position:relative;overflow:hidden;border-radius:2px;background:linear-gradient(145deg,var(--sand) 0%,var(--rose) 130%)}
-.swatch::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 25% 20%,rgba(255,255,255,.35),transparent 55%),radial-gradient(circle at 80% 85%,rgba(42,33,28,.12),transparent 60%)}
-.swatch.tone-2{background:linear-gradient(155deg,var(--ivory-deep) 0%,var(--sand-deep) 60%,var(--rose) 140%)}
-.swatch.tone-3{background:linear-gradient(160deg,var(--rose) 0%,var(--espresso-soft) 160%)}
-.swatch.tone-4{background:linear-gradient(140deg,var(--sand-deep) 0%,var(--rose-deep) 150%)}
-.swatch-label{position:absolute;bottom:14px;left:16px;font-size:.72rem;letter-spacing:.04em;color:rgba(255,255,255,.9);font-style:italic;font-family:'Fraunces',serif}
-.r-34{aspect-ratio:3/4}.r-45{aspect-ratio:4/5}.r-1610{aspect-ratio:16/10}
-
-/* Buttons */
-.btn{display:inline-block;padding:13px 30px;border-radius:2px;font-family:'Sora',sans-serif;font-size:.88rem;letter-spacing:.02em;cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease;border:1px solid var(--espresso)}
-.btn-dark{background:var(--espresso);color:var(--ivory)}
-.btn-dark:hover{background:var(--rose-deep);border-color:var(--rose-deep)}
-.btn-outline{background:transparent;color:var(--espresso)}
-.btn-outline:hover{background:var(--espresso);color:var(--ivory)}
-.link-u{border-bottom:1px solid var(--espresso);font-size:.9rem}
-
-/* Layout helpers */
-.page-hero{padding:64px 0 48px;border-bottom:1px solid var(--line)}
-.page-hero h1{font-size:clamp(2rem,4vw,2.8rem)}
-.page-hero .lead{max-width:46ch;color:var(--espresso-soft);margin-top:14px}
-.section{padding:72px 0}
-.band{background:var(--sand)}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
-.two-col.top{align-items:start}
-.center{text-align:center}
-.narrow{max-width:520px;margin:0 auto}
-
-/* Home */
-.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;padding:64px 32px 72px}
-.hero-grid h1{font-size:clamp(2.4rem,5vw,3.6rem)}
-.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
-.cat-grid p{font-size:.95rem;margin-top:12px}
-.quote{font-size:clamp(1.7rem,3vw,2.3rem);font-style:italic}
-
-/* Shop */
-.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
-.filter-pill{border:1px solid var(--line);background:transparent;padding:9px 18px;border-radius:20px;font-family:'Sora',sans-serif;font-size:.85rem;cursor:pointer;color:var(--espresso);transition:all .15s ease}
-.filter-pill:hover{border-color:var(--rose-deep)}
-.filter-pill.active{background:var(--espresso);color:var(--ivory);border-color:var(--espresso)}
-.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 24px;padding:48px 0 24px}
-.product-media{position:relative}
-.product-media img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:2px;display:block}
-.badge{position:absolute;top:10px;left:10px;font-size:.7rem;padding:4px 10px;border-radius:12px;color:var(--ivory)}
-.badge.sold{background:var(--espresso)}.badge.low{background:var(--rose-deep)}
-.product-name{font-size:.98rem;margin-top:14px}
-.product-price{color:var(--espresso-soft);font-size:.9rem;margin-top:4px}
-.product-sizes{font-size:.78rem;color:var(--espresso-soft);margin-top:4px}
-.product-desc{font-size:.82rem;color:var(--espresso-soft);margin-top:6px}
-.product-card.out{opacity:.55}
-
-/* Info pages */
-table{width:100%;border-collapse:collapse;margin-top:24px;font-size:.92rem}
-th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line)}
-th{font-family:'Fraunces',serif;font-weight:500;color:var(--espresso-soft);font-size:.85rem}
-.table-scroll{overflow-x:auto}
-.step{display:flex;align-items:flex-start;margin-bottom:22px}
-.step-num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--sand);font-family:'Fraunces',serif;font-style:italic;margin-right:12px;flex-shrink:0}
-.faq-item{border-bottom:1px solid var(--line);padding:22px 0}
-.faq-item:first-of-type{padding-top:0}
-.faq-item h3{font-size:1.05rem;font-weight:500;font-family:'Sora',sans-serif}
-.faq-item p{color:var(--espresso-soft);margin-top:10px;font-size:.95rem}
-.values{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
-.values h3{font-size:1.1rem;font-style:italic}
-.values p{color:var(--espresso-soft);margin-top:10px;font-size:.95rem}
-
-/* Contact form */
-.contact-form{display:flex;flex-direction:column;gap:18px;max-width:520px}
-.contact-form label{font-size:.85rem;color:var(--espresso-soft);margin-bottom:6px;display:block}
-.contact-form input,.contact-form textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:2px;font-family:'Sora',sans-serif;font-size:.95rem;background:var(--ivory);color:var(--espresso)}
-.contact-form textarea{resize:vertical;min-height:120px}
-.form-note{font-size:.85rem;min-height:1.2em;color:var(--rose-deep)}
-
-/* Footer */
-footer{border-top:1px solid var(--line);margin-top:96px;background:var(--ivory-deep)}
-.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px;padding:56px 0 32px}
-.footer-grid h4{font-size:.82rem;letter-spacing:.03em;margin:0 0 16px;color:var(--espresso-soft);font-weight:500}
-.footer-grid ul{list-style:none;margin:0;padding:0}
-.footer-grid li{margin-bottom:10px;font-size:.92rem}
-.footer-grid a:hover{color:var(--rose-deep)}
-.footer-logo{font-family:'Fraunces',serif;font-style:italic;font-size:1.5rem;margin-bottom:12px}
-.footer-note{color:var(--espresso-soft);font-size:.88rem;max-width:34ch}
-.footer-bottom{border-top:1px solid var(--line);padding:18px 0 28px;font-size:.78rem;color:var(--espresso-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
-
-/* Mobile */
-@media (max-width:780px){
-  .primary-nav{position:fixed;inset:0 0 0 30%;background:var(--ivory);flex-direction:column;padding:100px 32px;gap:26px;font-size:1.15rem;transform:translateX(100%);transition:transform .25s ease;z-index:20;box-shadow:-12px 0 30px rgba(42,33,28,.08)}
-  .primary-nav.open{transform:translateX(0)}
-  .nav-toggle{display:block;z-index:21}
-  .utility-bar .wrap{justify-content:center;flex-wrap:wrap;gap:14px 22px}
-  .wrap{padding:0 20px}
-  .hero-grid,.two-col{grid-template-columns:1fr;gap:32px}
-  .hero-grid{padding:40px 20px 56px}
-  .cat-grid{grid-template-columns:repeat(2,1fr)}
-  .product-grid{grid-template-columns:repeat(2,1fr)}
-  .values{grid-template-columns:1fr}
-  .footer-grid{grid-template-columns:1fr 1fr}
-  .section{padding:56px 0}
-}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Al Noor United Fuel Est - Global Warehouse Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .login-card {
+      max-width: 420px;
+      margin: 80px auto;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    }
+    .kpi-card {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      border-left: 5px solid #0d6efd;
+      transition: transform 0.2s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-card.blue { border-left-color: #0d6efd; }
+    .kpi-card.green { border-left-color: #198754; }
+    .kpi-card.yellow { border-left-color: #ffc107; }
+    .table th {
+      font-weight: 600;
+      color: #555;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
 
-<div class="utility-bar">
-  <div class="wrap">
-    <a href="#home">Home</a>
-    <a href="#shop">Shop All</a>
-    <a href="#size-guide">Size Guide</a>
-    <a href="#shipping-returns">Shipping &amp; Returns</a>
-    <a href="#contact">Contact Us</a>
+  <!-- LOGIN CARD SECTION -->
+  <div id="loginSection" class="card login-card p-4">
+    <div class="text-center mb-3">
+      <h4 class="text-primary fw-bold mb-1">مؤسسة النور المتحدة للوقود</h4>
+      <p class="text-muted small mb-0">Al Noor United Fuel Est - Cross-Border Portal</p>
+    </div>
+    
+    <div id="alertMsg" class="alert alert-danger d-none" role="alert"></div>
+    
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="mb-3">
+        <label for="email" class="form-label fw-semibold">Email ID</label>
+        <input type="email" id="email" class="form-control" value="clerk@noor.com" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label fw-semibold">Password</label>
+        <input type="password" id="password" class="form-control" value="Noor@123" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Login to Dashboard</button>
+    </form>
   </div>
-</div>
 
-<header class="main-header">
-  <div class="wrap">
-    <a href="#home" class="logo">Soie</a>
-    <nav class="primary-nav" id="primary-nav">
-      <a href="#shop/new-in" data-nav="shop/new-in">New In</a>
-      <a href="#shop/bras" data-nav="shop/bras">Bras</a>
-      <a href="#shop/panties" data-nav="shop/panties">Panties</a>
-      <a href="#shop/sets" data-nav="shop/sets">Sets</a>
-      <a href="#about" data-nav="about">About Us</a>
-    </nav>
-    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
-  </div>
-</header>
-
-<main>
-
-<!-- ===================== HOME ===================== -->
-<section class="view" id="view-home">
-  <div style="border-bottom:1px solid var(--line)">
-    <div class="wrap hero-grid">
+  <!-- MAIN DASHBOARD SECTION -->
+  <div id="dashboardSection" class="container py-4 d-none">
+    <!-- Header Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
       <div>
-        <p class="eyebrow">Everyday intimates, considered</p>
-        <h1>Made to be forgotten on your skin, remembered in how you feel.</h1>
-        <p class="muted" style="max-width:46ch;margin-top:22px;font-size:1.05rem">Soie designs bras, panties and sets around real bodies: soft-touch fabrics, seams that don’t dig in, and shapes you’ll actually reach for.</p>
-        <div style="display:flex;gap:14px;margin-top:32px;flex-wrap:wrap">
-          <a href="#shop" class="btn btn-dark">Shop All</a>
-          <a href="#size-guide" class="btn btn-outline">Find your size</a>
+        <h3 class="fw-bold mb-1 text-dark">Live Warehouse Stock & Transaction Dashboard</h3>
+        <small class="text-muted"><span class="badge bg-success">● Live Sync</span> Delhi ↔ Riyadh | Al Noor United Fuel Est</small>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <select id="roleSelector" class="form-select form-select-sm" onchange="toggleView()">
+          <option value="riyadh">View: Riyadh Manager Dashboard</option>
+          <option value="delhi">View: Delhi Data Entry Panel</option>
+        </select>
+        <span class="badge bg-light text-dark border px-3 py-2" id="userBadge">Clerk</span>
+        <button onclick="logout()" class="btn btn-outline-danger btn-sm fw-semibold">Logout</button>
+      </div>
+    </div>
+
+    <!-- DELHI DATA ENTRY PANEL -->
+    <div id="delhiSection" class="card p-4 shadow-sm mb-4 border-0 d-none">
+      <h5 class="fw-bold text-primary mb-3">📍 Delhi Data Entry Panel</h5>
+      <form id="entryForm" onsubmit="submitTransaction(event)">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Item Code</label>
+            <input type="text" id="itemCode" class="form-control" placeholder="e.g. 763225" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Type</label>
+            <select id="transType" class="form-select">
+              <option value="INBOUND">INBOUND (Received)</option>
+              <option value="OUTBOUND">OUTBOUND (Dispatched)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Quantity</label>
+            <input type="number" id="transQty" class="form-control" placeholder="100" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Unit Price (SAR)</label>
+            <input type="number" step="0.01" id="unitPrice" class="form-control" placeholder="25.50" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary fw-bold mt-3 w-100">Broadcast Transaction to Cloud</button>
+      </form>
+    </div>
+
+    <!-- RIYADH LIVE VIEW -->
+    <div id="riyadhSection">
+      <!-- KPI Summary Scorecards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="kpi-card p-3 blue">
+            <span class="text-muted small fw-semibold">TOTAL OPENING QUANTITY</span>
+            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOpenQty">272,750.84</h3>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="kpi-card p-3 green">
+            <span class="text-muted small fw-semibold">TOTAL OUTSTANDING QUANTITY</span>
+            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOutstQty">272,750.84</h3>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="kpi-card p-3 yellow">
+            <span class="text-muted small fw-semibold">TOTAL VALUATION AMOUNT (SAR)</span>
+            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOutstAmt">SAR 796,973.12</h3>
+          </div>
         </div>
       </div>
-      <div class="swatch r-45"><span class="swatch-label">The Everyday Edit</span></div>
-    </div>
-  </div>
 
-  <div class="section">
-    <div class="wrap">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px;flex-wrap:wrap;gap:12px">
-        <h2 style="font-size:1.9rem">Shop by category</h2>
-        <a href="#shop" class="link-u">View all pieces</a>
+      <!-- Inventory Valuation Chart -->
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card p-4 shadow-sm border-0 rounded-3">
+            <h5 class="fw-bold mb-3 text-secondary">Top Inventory Items by Valuation (SAR)</h5>
+            <div class="chart-container" style="position: relative; height: 350px;">
+              <canvas id="inventoryChart"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="cat-grid">
-        <a href="#shop/new-in"><div class="swatch tone-2 r-34"><span class="swatch-label">New In</span></div><p>New In</p></a>
-        <a href="#shop/bras"><div class="swatch r-34"><span class="swatch-label">Bras</span></div><p>Bras</p></a>
-        <a href="#shop/panties"><div class="swatch tone-4 r-34"><span class="swatch-label">Panties</span></div><p>Panties</p></a>
-        <a href="#shop/sets"><div class="swatch tone-3 r-34"><span class="swatch-label">Sets</span></div><p>Sets</p></a>
-      </div>
-    </div>
-  </div>
 
-  <div class="band section" style="padding:80px 0">
-    <div class="wrap center" style="max-width:720px">
-      <h2 class="quote">“We design for the body you actually have on a Tuesday morning, not a campaign shoot.”</h2>
-      <p class="muted" style="margin-top:22px">Every piece is tested through a full day of wear before it makes the shop. That’s the only review that matters to us.</p>
-    </div>
-  </div>
-
-  <div class="section" style="padding:80px 0 0">
-    <div class="wrap two-col">
-      <div class="swatch tone-2 r-1610"><span class="swatch-label">Fit, sorted</span></div>
-      <div>
-        <h2 style="font-size:2rem">Not sure what fits?</h2>
-        <p class="muted" style="margin-top:16px;max-width:42ch">Our size guide walks you through a two-minute measurement so you can order once and keep it. No guesswork, no returns pile-up.</p>
-        <a href="#size-guide" class="btn btn-outline" style="margin-top:24px">Open the size guide</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== SHOP ===================== -->
-<section class="view" id="view-shop" hidden>
-  <div class="page-hero">
-    <div class="wrap">
-      <p class="eyebrow">The full collection</p>
-      <h1>Shop All</h1>
-      <div class="filter-row" id="filter-row">
-        <button class="filter-pill" data-filter="all">All</button>
-        <button class="filter-pill" data-filter="new-in">New In</button>
-        <button class="filter-pill" data-filter="bras">Bras</button>
-        <button class="filter-pill" data-filter="panties">Panties</button>
-        <button class="filter-pill" data-filter="sets">Sets</button>
-      </div>
-      <p class="muted" style="margin-top:20px;font-size:.85rem"><span id="result-count">0 pieces</span> shown</p>
-    </div>
-  </div>
-  <div class="wrap">
-    <div class="product-grid" id="product-grid"><p class="muted" style="grid-column:1/-1">Loading products…</p></div>
-  </div>
-</section>
-
-<!-- ===================== ABOUT ===================== -->
-<section class="view" id="view-about" hidden>
-  <div class="page-hero">
-    <div class="wrap">
-      <p class="eyebrow">Our story</p>
-      <h1>About Soie</h1>
-      <p class="lead">We started Soie because too many “basics” were built for a photo, not a body.</p>
-    </div>
-  </div>
-  <div class="section">
-    <div class="wrap two-col">
-      <div class="swatch tone-2 r-45"><span class="swatch-label">Where it started</span></div>
-      <div>
-        <h2 style="font-size:1.8rem">Comfort first, always.</h2>
-        <p class="muted" style="margin-top:16px">Soie began with a simple frustration: bras that looked good on a hanger and dug in by lunchtime. So we rebuilt the basics from the inside out, with softer bands, tagless finishes, and fabrics chosen for a full day of wear, not a five-minute try-on.</p>
-        <p class="muted" style="margin-top:16px">Every design goes through real wear-testing across a range of bodies before it’s approved. If it’s not something our own team reaches for on a normal Tuesday, it doesn’t make the shop.</p>
+      <!-- Inventory Data Table -->
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card p-4 shadow-sm border-0 rounded-3">
+            <h5 class="fw-bold mb-3 text-secondary">Main Warehouse Stock Catalog</h5>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Item Code</th>
+                    <th>Description (اسم المنتج / الوصف)</th>
+                    <th>Opening Qty</th>
+                    <th>Outstanding Qty</th>
+                    <th>Total Amount (SAR)</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="band section" style="padding:72px 0">
-    <div class="wrap">
-      <h2 style="font-size:1.8rem;margin-bottom:36px">What we care about</h2>
-      <div class="values">
-        <div><h3>Fabric that lasts</h3><p>We choose finishes that hold their shape wash after wash, not just on day one.</p></div>
-        <div><h3>Fit for real bodies</h3><p>Our size guide and shapes are built from a wide range of measurements, not a single sample size.</p></div>
-        <div><h3>Honest pricing</h3><p>No inflated “sale” prices. What you see is what it costs to make it well.</p></div>
-      </div>
-    </div>
-  </div>
-  <div class="section center">
-    <div class="wrap narrow">
-      <h2 style="font-size:1.7rem">Have a question for us?</h2>
-      <p class="muted" style="margin-top:14px">We read every message ourselves.</p>
-      <a href="#contact" class="btn btn-dark" style="margin-top:22px">Get in touch</a>
-    </div>
-  </div>
-</section>
 
-<!-- ===================== SIZE GUIDE ===================== -->
-<section class="view" id="view-size-guide" hidden>
-  <div class="page-hero">
-    <div class="wrap">
-      <p class="eyebrow">Two minutes, one time</p>
-      <h1>Size Guide</h1>
-      <p class="lead">Measure once with a soft tape measure and you’ll know your size across our whole range.</p>
-    </div>
-  </div>
-  <div class="section" style="padding:56px 0">
-    <div class="wrap two-col top">
-      <div>
-        <h2 style="font-size:1.5rem;margin-bottom:24px">How to measure</h2>
-        <div class="step"><span class="step-num">1</span><p class="muted">Wearing a non-padded bra, wrap the tape snugly around your ribcage, just under the bust. This is your <strong>band measurement</strong>.</p></div>
-        <div class="step"><span class="step-num">2</span><p class="muted">Wrap the tape around the fullest part of your bust, keeping it level. This is your <strong>bust measurement</strong>.</p></div>
-        <div class="step"><span class="step-num">3</span><p class="muted">Subtract band from bust. The difference in inches gives your cup size (1″ = A, 2″ = B, 3″ = C, and so on).</p></div>
-        <div class="step"><span class="step-num">4</span><p class="muted">For panties, measure around the fullest part of your hips and match it to the chart below.</p></div>
-      </div>
-      <div class="swatch tone-4 r-45"><span class="swatch-label">Measuring, made simple</span></div>
-    </div>
-  </div>
-  <div class="band section" style="padding:64px 0">
-    <div class="wrap">
-      <h2 style="font-size:1.5rem">Bra size chart (in)</h2>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Band</th><th>Band size</th><th>A cup (bust)</th><th>B cup (bust)</th><th>C cup (bust)</th><th>D cup (bust)</th></tr></thead>
-          <tbody>
-            <tr><td>28–29″</td><td>32</td><td>33–34″</td><td>34–35″</td><td>35–36″</td><td>36–37″</td></tr>
-            <tr><td>30–31″</td><td>34</td><td>35–36″</td><td>36–37″</td><td>37–38″</td><td>38–39″</td></tr>
-            <tr><td>32–33″</td><td>36</td><td>37–38″</td><td>38–39″</td><td>39–40″</td><td>40–41″</td></tr>
-            <tr><td>34–35″</td><td>38</td><td>39–40″</td><td>40–41″</td><td>41–42″</td><td>42–43″</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <h2 style="font-size:1.5rem;margin-top:48px">Panty size chart (in)</h2>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Size</th><th>Hip measurement</th></tr></thead>
-          <tbody>
-            <tr><td>XS</td><td>34–35″</td></tr>
-            <tr><td>S</td><td>36–37″</td></tr>
-            <tr><td>M</td><td>38–39″</td></tr>
-            <tr><td>L</td><td>40–42″</td></tr>
-            <tr><td>XL</td><td>43–45″</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-  <div class="section center" style="padding:56px 0 0">
-    <div class="wrap narrow" style="max-width:480px">
-      <h2 style="font-size:1.5rem">Still between sizes?</h2>
-      <p class="muted" style="margin-top:12px">Reach out and we’ll help you find the right fit before you order.</p>
-      <a href="#contact" class="btn btn-outline" style="margin-top:20px">Ask us</a>
-    </div>
-  </div>
-</section>
+  <script>
+    // Supabase Credentials
+    const SUPABASE_URL = "https://wqkbspwnuofkytunxssd.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indxa2JzcHdudW9ma3l0dW54c3NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNTAyODQsImV4cCI6MjEwODgyNjI4NH0.tbWf0f7mLzpUNeWgFZB1dX7_07P3_YUQrVR0wckoNqI";
 
-<!-- ===================== SHIPPING & RETURNS ===================== -->
-<section class="view" id="view-shipping-returns" hidden>
-  <div class="page-hero">
-    <div class="wrap">
-      <p class="eyebrow">Good to know</p>
-      <h1>Shipping &amp; Returns</h1>
-      <p class="lead">Straightforward policies, no fine print games.</p>
-    </div>
-  </div>
-  <div class="section" style="padding:56px 0">
-    <div class="wrap two-col top">
-      <div>
-        <h2 style="font-size:1.5rem;margin-bottom:20px">Shipping</h2>
-        <div class="faq-item"><h3>Standard shipping: 4–6 business days</h3><p>Free on orders over $60. $5.50 on orders under $60.</p></div>
-        <div class="faq-item"><h3>Express shipping: 1–2 business days</h3><p>$12, calculated at checkout. Order by 1pm for same-day dispatch.</p></div>
-        <div class="faq-item"><h3>Order tracking</h3><p>You’ll get a tracking link by email as soon as your order ships.</p></div>
-      </div>
-      <div>
-        <h2 style="font-size:1.5rem;margin-bottom:20px">Returns &amp; exchanges</h2>
-        <div class="faq-item"><h3>30-day returns</h3><p>Unworn items with tags attached can be returned within 30 days for a full refund.</p></div>
-        <div class="faq-item"><h3>Hygiene note</h3><p>For hygiene reasons, panties can only be returned if the hygiene liner is intact and unremoved.</p></div>
-        <div class="faq-item"><h3>Exchanges</h3><p>Need a different size? Start a return and place a new order. We’ll get the right fit to you faster that way.</p></div>
-        <div class="faq-item"><h3>Refund timing</h3><p>Refunds are issued to your original payment method within 5–7 business days of us receiving your return.</p></div>
-      </div>
-    </div>
-  </div>
-  <div class="band section center" style="padding:56px 0">
-    <div class="wrap narrow" style="max-width:480px">
-      <h2 style="font-size:1.5rem">Need help with an order?</h2>
-      <p class="muted" style="margin-top:12px">Our team can start a return or answer shipping questions directly.</p>
-      <a href="#contact" class="btn btn-dark" style="margin-top:20px">Contact Us</a>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== CONTACT ===================== -->
-<section class="view" id="view-contact" hidden>
-  <div class="page-hero">
-    <div class="wrap">
-      <p class="eyebrow">We’d love to hear from you</p>
-      <h1>Contact Us</h1>
-      <p class="lead">Questions about sizing, an order, or just want to say hi? Send it over.</p>
-    </div>
-  </div>
-  <div class="section" style="padding:56px 0">
-    <div class="wrap two-col top">
-      <div>
-        <h2 style="font-size:1.4rem;margin-bottom:20px">Send a message</h2>
-        <form class="contact-form" id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-          <input type="hidden" name="form-name" value="contact">
-          <p style="display:none"><label>Don’t fill this out if you’re human: <input name="bot-field"></label></p>
-          <div><label for="name">Name</label><input type="text" id="name" name="name" required></div>
-          <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
-          <div><label for="message">Message</label><textarea id="message" name="message" required></textarea></div>
-          <button type="submit" class="btn btn-dark" style="align-self:flex-start">Send message</button>
-          <p class="form-note" id="form-note"></p>
-        </form>
-      </div>
-      <div>
-        <h2 style="font-size:1.4rem;margin-bottom:20px">Other ways to reach us</h2>
-        <p class="muted" style="margin-bottom:8px"><strong>Email</strong></p>
-        <p style="margin-bottom:20px"><a href="mailto:hello@soie-example.com" class="link-u" style="font-size:inherit">hello@soie-example.com</a></p>
-        <p class="muted" style="margin-bottom:8px"><strong>Hours</strong></p>
-        <p style="margin-bottom:20px">Monday–Friday, 9am–5pm</p>
-        <p class="muted" style="margin-bottom:8px"><strong>Response time</strong></p>
-        <p>We typically reply within one business day.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="wrap footer-grid">
-    <div>
-      <div class="footer-logo">Soie</div>
-      <p class="footer-note">Intimate apparel designed around comfort, quiet confidence, and fabrics that hold up to real life.</p>
-    </div>
-    <div>
-      <h4>Shop</h4>
-      <ul>
-        <li><a href="#shop/new-in">New In</a></li>
-        <li><a href="#shop/bras">Bras</a></li>
-        <li><a href="#shop/panties">Panties</a></li>
-        <li><a href="#shop/sets">Sets</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>Help</h4>
-      <ul>
-        <li><a href="#size-guide">Size Guide</a></li>
-        <li><a href="#shipping-returns">Shipping &amp; Returns</a></li>
-        <li><a href="#contact">Contact Us</a></li>
-      </ul>
-    </div>
-    <div>
-      <h4>Company</h4>
-      <ul><li><a href="#about">About Us</a></li></ul>
-    </div>
-  </div>
-  <div class="wrap footer-bottom">
-    <span>&copy; 2026 Soie. All rights reserved.</span>
-    <span>Placeholder site: swap in your brand name and photos anytime. &middot; <a href="/owner.html">Owner login</a></span>
-  </div>
-</footer>
-
-<script>
-(function () {
-  'use strict';
-
-  /* ---------- Helpers ---------- */
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
-  /* ---------- Fallback catalog (used only if products.json can't be loaded) ---------- */
-  var FALLBACK = [
-    { active:true, name:'Cloud Wire-Free Bra', price:'$48', stock:24, categories:['new-in','bras'], sizes:['S','M','L'], description:'A soft-cup, wire-free bra built for full-day wear.', tone:'tone-2' },
-    { active:true, name:'Ribbed Bralette', price:'$38', stock:15, categories:['new-in','bras'], sizes:['XS','S','M'], description:'A ribbed, pullover bralette with light shaping.', tone:'' },
-    { active:true, name:'Seamless Everyday Brief', price:'$18', stock:40, categories:['new-in','panties'], sizes:['XS','S','M','L'], description:'Tagless and seamless for wearing under anything.', tone:'tone-4' },
-    { active:true, name:'Soft-Cup T-Shirt Bra', price:'$44', stock:18, categories:['bras'], sizes:['S','M','L','XL'], description:'A smooth, molded cup that disappears under fitted tops.', tone:'tone-3' },
-    { active:true, name:'Lightly Lined Balconette', price:'$46', stock:9, categories:['bras'], sizes:['S','M','L'], description:'A lifted shape with a lower neckline for open collars.', tone:'tone-2' },
-    { active:true, name:'Cotton Everyday Bra', price:'$36', stock:0, categories:['bras'], sizes:['XS','S','M'], description:'Breathable cotton blend for warm-weather comfort.', tone:'' },
-    { active:true, name:'High-Rise Brief', price:'$16', stock:32, categories:['panties'], sizes:['XS','S','M','L','XL'], description:'Full coverage with a soft, wide waistband.', tone:'tone-4' },
-    { active:true, name:'Cheeky Hipster, 3-Pack', price:'$32', stock:21, categories:['panties'], sizes:['S','M','L'], description:'Three everyday hipsters in rotating core colors.', tone:'tone-3' },
-    { active:true, name:'Lace-Trim Bikini', price:'$19', stock:4, categories:['panties'], sizes:['XS','S','M'], description:'A classic bikini cut finished with a delicate lace edge.', tone:'tone-2' },
-    { active:true, name:'The Everyday Set', price:'$62', stock:12, categories:['sets'], sizes:['S','M','L'], description:'Our soft-cup bra and high-rise brief, matched.', tone:'' },
-    { active:true, name:'Ribbed Bralette + Brief Set', price:'$54', stock:7, categories:['sets'], sizes:['XS','S','M'], description:'Ribbed bralette paired with a matching brief.', tone:'tone-4' },
-    { active:true, name:'Lace Trim Matching Set', price:'$68', stock:3, categories:['sets'], sizes:['S','M','L'], description:'Lace-trimmed bra and brief, sold as a pair.', tone:'tone-3' }
-  ];
-
-  var products = [];
-  var currentFilter = 'all';
-
-  /* ---------- Load products.json (the file the admin panel edits) ---------- */
-  function loadProducts() {
-    return fetch('products.json', { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('bad response'); return r.json(); })
-      .then(function (data) { products = (data.products || []).filter(function (p) { return p.active !== false; }); })
-      .catch(function () { products = FALLBACK; });
-  }
-
-  /* ---------- Render the shop grid ---------- */
-  function renderShop() {
-    var grid = document.getElementById('product-grid');
-    var shown = products.filter(function (p) {
-      return currentFilter === 'all' || (p.categories || []).indexOf(currentFilter) !== -1;
-    });
-
-    document.getElementById('result-count').textContent = shown.length + (shown.length === 1 ? ' piece' : ' pieces');
-    document.querySelectorAll('.filter-pill').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.filter === currentFilter);
-    });
-
-    if (!shown.length) {
-      grid.innerHTML = '<p class="muted" style="grid-column:1/-1">Nothing here yet. Check back soon.</p>';
-      return;
+    let supabase;
+    if (typeof window.supabase !== 'undefined') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     }
 
-    grid.innerHTML = shown.map(function (p) {
-      var stock = typeof p.stock === 'number' ? p.stock : null;
-      var label = (p.categories && p.categories[0]) ? p.categories[0].replace('-', ' ') : '';
-      var visual = p.image
-        ? '<img src="' + esc(p.image) + '" alt="' + esc(p.name) + '" loading="lazy">'
-        : '<div class="swatch r-34 ' + esc(p.tone || '') + '"><span class="swatch-label">' + esc(label) + '</span></div>';
-      var badge = '';
-      if (stock === 0) badge = '<span class="badge sold">Sold out</span>';
-      else if (stock !== null && stock <= 5) badge = '<span class="badge low">Only ' + stock + ' left</span>';
-      var sizes = (p.sizes && p.sizes.length) ? '<p class="product-sizes">Sizes: ' + p.sizes.map(esc).join(', ') + '</p>' : '';
-      var desc = p.description ? '<p class="product-desc">' + esc(p.description) + '</p>' : '';
-      return '<div class="product-card' + (stock === 0 ? ' out' : '') + '">' +
-        '<div class="product-media">' + visual + badge + '</div>' +
-        '<p class="product-name">' + esc(p.name) + '</p>' +
-        '<p class="product-price">' + esc(p.price) + '</p>' + sizes + desc + '</div>';
-    }).join('');
-  }
+    const SAMPLE_ITEMS = [
+      { sn: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, outstQty: 42000, amt: 1207.50 },
+      { sn: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, outstQty: 40000, amt: 0.00 },
+      { sn: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, outstQty: 39500, amt: 3160.00 },
+      { sn: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, outstQty: 32000, amt: 0.00 },
+      { sn: 5, code: "401", desc: "زيت منظف", openQty: 20904, outstQty: 20904, amt: 73301.99 },
+      { sn: 6, code: "60102", desc: "(50w20) زيت بنزين بترومين", openQty: 11160, outstQty: 11160, amt: 101566.31 },
+      { sn: 7, code: "D-00", desc: "اشرطة امان معدنية مرقمة - أصفر", openQty: 10500, outstQty: 10500, amt: 4693.34 },
+      { sn: 8, code: "7 1989", desc: "Noorkhoy NFCs with Serial Number", openQty: 9500, outstQty: 9500, amt: 22164.07 }
+    ];
 
-  /* ---------- Router (hash based: #home, #shop, #shop/bras, #about ...) ---------- */
-  var VIEWS = ['home', 'shop', 'about', 'size-guide', 'shipping-returns', 'contact'];
-  var TITLES = {
-    'home': 'Soie — Intimates, made to feel like yours', 'shop': 'Shop All — Soie', 'about': 'About Us — Soie',
-    'size-guide': 'Size Guide — Soie', 'shipping-returns': 'Shipping & Returns — Soie', 'contact': 'Contact Us — Soie'
-  };
+    function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const alertMsg = document.getElementById('alertMsg');
 
-  function route() {
-    var raw = location.hash.replace(/^#\/?/, '');
-    // Ignore Netlify Identity links such as #invite_token=... or #recovery_token=...
-    if (raw && /token=|error=/.test(raw)) return;
-    var parts = raw.split('/');
-    var view = parts[0] || 'home';
-    if (VIEWS.indexOf(view) === -1) view = 'home';
-
-    document.querySelectorAll('.view').forEach(function (v) { v.hidden = (v.id !== 'view-' + view); });
-    document.title = TITLES[view];
-
-    var key = view === 'shop' ? 'shop/' + (parts[1] || 'all') : view;
-    document.querySelectorAll('[data-nav]').forEach(function (a) { a.classList.toggle('active', a.dataset.nav === key); });
-
-    if (view === 'shop') {
-      currentFilter = ['all', 'new-in', 'bras', 'panties', 'sets'].indexOf(parts[1]) !== -1 ? parts[1] : 'all';
-      renderShop();
+      if (email.trim().toLowerCase() === "clerk@noor.com" && password === "Noor@123") {
+        document.getElementById('loginSection').classList.add('d-none');
+        document.getElementById('dashboardSection').classList.remove('d-none');
+        document.getElementById('userBadge').innerText = "clerk@noor.com";
+        renderDashboard();
+      } else {
+        alertMsg.innerText = "Invalid Email ID or Password. Use clerk@noor.com / Noor@123";
+        alertMsg.classList.remove('d-none');
+      }
     }
-    window.scrollTo(0, 0);
-    closeNav();
-  }
 
-  /* ---------- Mobile nav ---------- */
-  var nav = document.getElementById('primary-nav');
-  var toggle = document.getElementById('nav-toggle');
-  function closeNav() {
-    nav.classList.remove('open');
-    toggle.innerHTML = '&#9776;';
-    toggle.setAttribute('aria-expanded', 'false');
-  }
-  toggle.addEventListener('click', function () {
-    var open = nav.classList.toggle('open');
-    toggle.innerHTML = open ? '&#10005;' : '&#9776;';
-    toggle.setAttribute('aria-expanded', open);
-  });
+    function renderDashboard() {
+      renderChart();
+      renderTable();
+    }
 
-  /* ---------- Filter buttons ---------- */
-  document.getElementById('filter-row').addEventListener('click', function (e) {
-    var btn = e.target.closest('.filter-pill');
-    if (!btn) return;
-    location.hash = btn.dataset.filter === 'all' ? '#shop' : '#shop/' + btn.dataset.filter;
-  });
-
-  /* ---------- Contact form → Netlify Forms ---------- */
-  var form = document.getElementById('contact-form');
-  var note = document.getElementById('form-note');
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var body = new URLSearchParams(new FormData(form)).toString();
-    fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body })
-      .then(function (r) {
-        if (!r.ok) throw new Error('failed');
-        note.textContent = 'Thanks, your message has been sent. We’ll reply within one business day.';
-        form.reset();
-      })
-      .catch(function () {
-        note.textContent = 'This form only works once the site is live on Netlify, so it can’t send from a local preview.';
+    function renderChart() {
+      const ctx = document.getElementById('inventoryChart').getContext('2d');
+      const sortedItems = [...SAMPLE_ITEMS].sort((a, b) => b.amt - a.amt).slice(0, 5);
+      
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedItems.map(item => item.desc),
+          datasets: [{
+            label: 'Valuation Amount (SAR)',
+            data: sortedItems.map(item => item.amt),
+            backgroundColor: '#0d6efd',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
       });
-  });
+    }
 
-  /* ---------- Start ---------- */
-  window.addEventListener('hashchange', route);
-  loadProducts().then(route);
-})();
-</script>
+    function renderTable() {
+      const tbody = document.getElementById('inventoryTableBody');
+      tbody.innerHTML = '';
+      
+      SAMPLE_ITEMS.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.sn}</td>
+          <td><span class="badge bg-light text-dark border">${item.code}</span></td>
+          <td class="fw-semibold">${item.desc}</td>
+          <td>${item.openQty.toLocaleString()}</td>
+          <td>${item.outstQty.toLocaleString()}</td>
+          <td class="fw-bold text-success">SAR ${item.amt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleView() {
+      const role = document.getElementById('roleSelector').value;
+      if (role === 'delhi') {
+        document.getElementById('delhiSection').classList.remove('d-none');
+      } else {
+        document.getElementById('delhiSection').classList.add('d-none');
+      }
+    }
+
+    async function submitTransaction(e) {
+      e.preventDefault();
+      const item_code = document.getElementById('itemCode').value;
+      const type = document.getElementById('transType').value;
+      const quantity = parseFloat(document.getElementById('transQty').value);
+      const unit_price = parseFloat(document.getElementById('unitPrice').value);
+
+      if (!supabase) {
+        alert('Supabase client not loaded. Check internet connection.');
+        return;
+      }
+
+      const { error } = await supabase.from('transactions').insert([
+        { item_code, type, quantity, unit_price, location: 'Delhi Warehouse', entered_by: 'Delhi Clerk' }
+      ]);
+
+      if (!error) {
+        alert('Transaction Broadcasted Successfully!');
+        document.getElementById('entryForm').reset();
+      } else {
+        alert('Database Error: ' + error.message);
+      }
+    }
+
+    function logout() {
+      location.reload();
+    }
+  </script>
 </body>
 </html>
