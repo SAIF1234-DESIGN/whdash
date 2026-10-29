@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Al Noor United Fuel Est - Main Warehouse Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -93,7 +92,7 @@
       <div>
         <h4 class="fw-bold mb-0 text-primary">مؤسسة النور المتحدة للوقود</h4>
         <h5 class="fw-bold mb-0 text-dark">Al Noor United Fuel Est</h5>
-        <small class="text-muted"><span class="badge bg-success">● Live Supabase Sync</span> Main Warehouse / Southern Warehouse Stock Sheet</small>
+        <small class="text-muted"><span class="badge bg-success">● Local Session Active</span> Main Warehouse / Southern Warehouse Stock Sheet</small>
       </div>
       <div class="d-flex align-items-center gap-3">
         <span class="badge bg-secondary px-3 py-2" id="userBadge">Clerk</span>
@@ -280,7 +279,7 @@
               <label class="form-label fw-semibold">Opening Amount (المبلغ الافتتاحي)</label>
               <input type="number" step="0.01" id="newOpenAmt" class="form-control" value="0.00" required>
             </div>
-            <button type="submit" class="btn btn-success w-100 fw-bold">Save to Supabase Cloud</button>
+            <button type="submit" class="btn btn-success w-100 fw-bold">Save Item</button>
           </form>
         </div>
       </div>
@@ -291,13 +290,18 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    const SUPABASE_URL = "https://zfhasyrauufcuosghdbi.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmaGFzeXJhdXVmY3Vvc2doZGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyODcxMzgsImV4cCI6MjEwODg2MzEzOH0.Jl5y6QEtE0hUOMisnRmQMqm0B9ntjp0W5l0EC5QSDY0";
+    let inventoryCatalog = [
+      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, outQty: 0, receivedQty: 42000 },
+      { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00, outQty: 0, receivedQty: 40000 },
+      { id: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00, outQty: 0, receivedQty: 39500 },
+      { id: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00, outQty: 0, receivedQty: 32000 },
+      { id: 5, code: "401", desc: "زيت منظف", openQty: 20904, openAmt: 73301.99, outQty: 0, receivedQty: 20904 }
+    ];
 
-    let supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+    let transactions = [
+      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH" }
+    ];
 
-    let inventoryCatalog = [];
-    let transactions = [];
     let chartInstance = null;
 
     function handleLogin(e) {
@@ -307,7 +311,7 @@
       if (email.trim().toLowerCase() === "clerk@noor.com" && pwd === "Noor@123") {
         document.getElementById('loginSection').classList.add('d-none');
         document.getElementById('dashboardSection').classList.remove('d-none');
-        fetchSupabaseData();
+        renderAll();
       } else {
         const alertMsg = document.getElementById('alertMsg');
         alertMsg.innerText = "Invalid credentials. Use clerk@noor.com / Noor@123";
@@ -321,36 +325,6 @@
       document.getElementById('newOpenAmt').value = 0.00;
       var myModal = new bootstrap.Modal(document.getElementById('addItemModal'));
       myModal.show();
-    }
-
-    async function fetchSupabaseData() {
-      if (!supabaseClient) {
-        loadFallbackData();
-        return;
-      }
-
-      const { data: items, error: itemErr } = await supabaseClient.from('inventory_items').select('*');
-      const { data: txs, error: txErr } = await supabaseClient.from('transactions').select('*');
-
-      if (itemErr || !items || items.length === 0) {
-        loadFallbackData();
-      } else {
-        inventoryCatalog = items;
-        transactions = txs || [];
-      }
-      renderAll();
-    }
-
-    function loadFallbackData() {
-      inventoryCatalog = [
-        { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, outQty: 0, receivedQty: 42000 },
-        { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00, outQty: 0, receivedQty: 40000 },
-        { id: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00, outQty: 0, receivedQty: 39500 }
-      ];
-      transactions = [
-        { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH" }
-      ];
-      renderAll();
     }
 
     function jumpToTransactions(code) {
@@ -450,7 +424,7 @@
       });
     }
 
-    async function addNewItem(e) {
+    function addNewItem(e) {
       e.preventDefault();
       const code = document.getElementById('newCode').value;
       const desc = document.getElementById('newDesc').value;
@@ -466,14 +440,6 @@
         receivedQty: openQty
       };
 
-      if (supabaseClient) {
-        const { error } = await supabaseClient.from('inventory_items').insert([newItem]);
-        if (error) {
-          alert('Supabase Insert Error: ' + error.message);
-          return;
-        }
-      }
-
       inventoryCatalog.push(newItem);
       renderAll();
 
@@ -481,10 +447,10 @@
       var modal = bootstrap.Modal.getInstance(modalEl);
       modal.hide();
       document.getElementById('newItemForm').reset();
-      alert('New item successfully added and synced to Supabase Cloud!');
+      alert('New item successfully added!');
     }
 
-    async function submitTransaction(e) {
+    function submitTransaction(e) {
       e.preventDefault();
       const code = document.getElementById('txItemCode').value;
       const type = document.getElementById('txType').value;
@@ -509,14 +475,6 @@
         costCentre: costCentre
       };
 
-      if (supabaseClient) {
-        const { error } = await supabaseClient.from('transactions').insert([newTx]);
-        if (error) {
-          alert('Supabase Transaction Error: ' + error.message);
-          return;
-        }
-      }
-
       transactions.push(newTx);
       if (found) {
         if (type === 'OUTBOUND') found.outQty = (parseFloat(found.outQty) || 0) + qty;
@@ -525,7 +483,7 @@
 
       renderAll();
       document.getElementById('txForm').reset();
-      alert('Transaction successfully recorded and synced to Supabase!');
+      alert('Transaction successfully recorded!');
     }
 
     function renderContributionChart() {
