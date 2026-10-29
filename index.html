@@ -520,12 +520,14 @@
     let activeTabName = 'opening';
     let currentUser = null; 
 
+    // Users Database
     const USERS = {
       "kassarsaif@gmail.com": { pass: "72724@Whdash", role: "admin", name: "System Admin" },
       "clerk@gmail.com": { pass: "Noor@123", role: "clerk", name: "Staff Clerk" },
       "clerk@noor.com": { pass: "Noor@123", role: "clerk", name: "Staff Clerk" }
     };
 
+    // Dictionary for Auto-Translating Item Descriptions between English & Arabic
     const dictionary = {
       "black gypsum screw": "برغى جبس اسود خشن",
       "stickers 95 noor khawi": "استيكرات 95 نور خوي",
@@ -544,8 +546,10 @@
       let clean = text.trim().toLowerCase();
       if (targetLang === 'ar') {
         if (dictionary[clean]) return dictionary[clean];
+        // Fallback / basic mapping
         return text;
       } else {
+        // Find key by value
         for (let k in dictionary) {
           if (dictionary[k] === text.trim()) return k.toUpperCase();
         }
@@ -613,8 +617,8 @@
       } else {
         roleBadge.innerText = "Staff Clerk (Data Entry & Upload)";
         roleBadge.className = "badge bg-success px-3 py-2";
-        if (addItemBtn) addItemBtn.style.display = 'inline-block';
-        if (uploadContainer) uploadContainer.style.display = 'inline-block';
+        if (addItemBtn) addItemBtn.style.display = 'inline-block'; // Clerk CAN add items & upload now
+        if (uploadContainer) uploadContainer.style.display = 'inline-block'; // Clerk CAN upload opening balances now
       }
     }
 
@@ -738,7 +742,7 @@
 
     function deleteItem(code) {
       if (!currentUser || currentUser.role !== 'admin') {
-        alert("Access Denied: Only Admin can delete items.");
+        alert("Access Denied: Only Admin can delete items (Clerk is not allowed to edit or delete inventory).");
         return;
       }
       if (confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الصنف ${code}؟` : `Are you sure you want to delete item code ${code}?`)) {
@@ -855,7 +859,15 @@
     }
 
     function hasMonthData(targetMonth) {
-      return true; // Always return true so all items display correctly in All Months / YTD or any active month
+      if (targetMonth === 'ALL') return true;
+      if (explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0) return true;
+      const monthTxs = transactions.filter(tx => tx.date.startsWith(targetMonth));
+      if (monthTxs.length > 0) return true;
+      
+      const now = new Date();
+      const currentActive = `${now.getFullYear()}-${(now.getMonth()+1)<10?'0'+(now.getMonth()+1):(now.getMonth()+1)}`;
+      if (targetMonth === currentActive && inventoryCatalog.length > 0) return true;
+      return false;
     }
 
     function calculateBalanceUpToDate(itemCode, upToDateStr) {
@@ -887,12 +899,8 @@
     }
 
     function getRolloverStats(itemCode, targetMonth) {
-      const item = inventoryCatalog.find(i => i.code === itemCode);
-      if (targetMonth === 'ALL') {
-        return {
-          openQty: item ? parseFloat(item.openQty) || 0 : 0,
-          openAmt: item ? parseFloat(item.openAmt) || 0 : 0
-        };
+      if (!hasMonthData(targetMonth)) {
+        return { openQty: null, openAmt: null };
       }
 
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
@@ -902,6 +910,7 @@
       const now = new Date();
       const currentActive = `${now.getFullYear()}-${(now.getMonth()+1)<10?'0'+(now.getMonth()+1):(now.getMonth()+1)}`;
       if (targetMonth === currentActive) {
+        const item = inventoryCatalog.find(i => i.code === itemCode);
         return {
           openQty: item ? parseFloat(item.openQty) || 0 : 0,
           openAmt: item ? parseFloat(item.openAmt) || 0 : 0
@@ -920,8 +929,13 @@
     }
 
     function getItemStats(itemCode, selectedMonth) {
+      if (!hasMonthData(selectedMonth)) {
+        return { openQty: null, inQty: 0, outQty: 0, outstandingQty: null, outstandingAmt: null, avgPrice: 0, qtyDiff: 0 };
+      }
+
       const itemTxs = transactions.filter(tx => tx.code === itemCode);
       const rollover = getRolloverStats(itemCode, selectedMonth);
+      if (rollover.openQty === null) return { openQty: null, inQty: 0, outQty: 0, outstandingQty: null, outstandingAmt: null, avgPrice: 0, qtyDiff: 0 };
 
       const openQty = rollover.openQty;
       const openAmt = rollover.openAmt;
@@ -966,6 +980,12 @@
       
       document.getElementById('bannerMonthLabel').innerText = monthText;
 
+      if (!hasMonthData(selectedMonth)) {
+        document.getElementById('bannerQty').innerText = "0.00";
+        document.getElementById('bannerAmt').innerText = "0.00";
+        return;
+      }
+
       let totalQty = 0;
       let totalAmt = 0;
 
@@ -975,8 +995,10 @@
 
         inventoryCatalog.forEach(item => {
           const rollover = getRolloverStats(item.code, selectedMonth);
-          totalQty += rollover.openQty;
-          totalAmt += rollover.openAmt;
+          if (rollover.openQty !== null) {
+            totalQty += rollover.openQty;
+            totalAmt += rollover.openAmt;
+          }
         });
       } else {
         document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerQtyText;
@@ -984,8 +1006,10 @@
 
         inventoryCatalog.forEach(item => {
           const stats = getItemStats(item.code, selectedMonth);
-          totalQty += stats.outstandingQty;
-          totalAmt += stats.outstandingAmt;
+          if (stats.outstandingQty !== null) {
+            totalQty += stats.outstandingQty;
+            totalAmt += stats.outstandingAmt;
+          }
         });
       }
 
@@ -1002,6 +1026,10 @@
       const selectedMonth = masterSelect ? masterSelect.value : '';
       document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : '';
 
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       const searchQuery = (document.getElementById('openingSearch').value || '').toLowerCase();
       const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
 
@@ -1013,6 +1041,8 @@
 
       paginated.forEach((item, index) => {
         const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
         const canDelete = currentUser && currentUser.role === 'admin';
 
         const tr = document.createElement('tr');
@@ -1039,6 +1069,10 @@
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '';
 
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       let catalogToRender = [...inventoryCatalog];
       if (currentIndexFilterCode) {
         const query = currentIndexFilterCode.toLowerCase();
@@ -1047,6 +1081,7 @@
 
       catalogToRender.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
+        if (stats.outstandingQty === null) return;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1078,6 +1113,10 @@
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '';
 
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
       if (currentTxFilterCode) {
@@ -1089,6 +1128,8 @@
 
       sortedCatalog.forEach(item => {
         const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
         const itemTxs = transactions.filter(tx => {
           if (tx.code !== item.code) return false;
           if (selectedMonth !== 'ALL' && !tx.date.startsWith(selectedMonth)) return false;
@@ -1194,6 +1235,7 @@
       let descEn = document.getElementById('newDescEn').value.trim();
       let descAr = document.getElementById('newDescAr').value.trim();
       
+      // Auto-translate if one is left blank
       if (descEn && !descAr) {
         descAr = autoTranslateText(descEn, 'ar');
       } else if (descAr && !descEn) {
@@ -1211,12 +1253,10 @@
 
       let existing = inventoryCatalog.find(i => i.code === code);
       if (!existing) {
-        inventoryCatalog.push({ code, descEn, descAr, openQty, openAmt });
+        inventoryCatalog.push({ code, descEn, descAr, openQty: 0, openAmt: 0 });
       } else {
         if (descEn) existing.descEn = descEn;
         if (descAr) existing.descAr = descAr;
-        existing.openQty = openQty;
-        existing.openAmt = openAmt;
       }
 
       if (masterMonth !== 'ALL') {
@@ -1261,12 +1301,8 @@
             const openAmt = parseFloat(parts[parts.length >= 5 ? 4 : 3]) || 0;
             
             if (code) {
-              let existing = inventoryCatalog.find(i => i.code === code);
-              if (!existing) {
-                inventoryCatalog.push({ code, descEn, descAr, openQty, openAmt });
-              } else {
-                existing.openQty = openQty;
-                existing.openAmt = openAmt;
+              if (!inventoryCatalog.some(i => i.code === code)) {
+                inventoryCatalog.push({ code, descEn, descAr, openQty: 0, openAmt: 0 });
               }
               explicitOpenBalances[uploadMonth][code] = { openQty, openAmt };
               count++;
@@ -1365,7 +1401,9 @@
       
       inventoryCatalog.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
-        csvContent += `${index + 1},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+        if (stats.outstandingQty !== null) {
+          csvContent += `${index + 1},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+        }
       });
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1386,6 +1424,8 @@
       let globalSn = 1;
       inventoryCatalog.forEach(item => {
         const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
         const itemTxs = transactions.filter(tx => {
           if (tx.code !== item.code) return false;
           if (selectedMonth !== 'ALL' && !tx.date.startsWith(selectedMonth)) return false;
@@ -1459,13 +1499,11 @@
       }
 
       chartInstance = new Chart(ctx, {
-        chart: 'bar',
         type: 'bar',
         data: {
           labels: rankedItems.map(i => i.desc),
           datasets: [{
             label: currentLang === 'ar' ? 'نسبة الصادر إلى الوارد الإجمالي (%)' : 'Outgoing vs Total Received Contribution Ratio (%)',
-            data: rankedItems.map(i => id => id.ratio),
             data: rankedItems.map(i => i.ratio),
             backgroundColor: '#1a365d',
             borderRadius: 6
