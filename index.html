@@ -176,32 +176,50 @@
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-primary mb-0">📝 Real-Time Transactional Movement (Item Card)</h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetTxFilter()">Show All Inventory</button>
+              <select id="txFilterSelect" class="form-select form-select-sm" onchange="filterTransactionsByDropdown(this.value)">
+                <option value="">-- Search / Filter Item --</option>
+              </select>
+            </div>
           </div>
           
           <!-- Transaction Entry Form -->
           <form id="txForm" onsubmit="submitTransaction(event)" class="row g-2 mb-3 p-3 bg-light rounded border">
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Item Code</label>
-              <input type="text" id="txItemCode" class="form-control form-control-sm" placeholder="763225" required>
+              <input type="text" id="txItemCode" class="form-control form-control-sm" readonly required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">Voucher No.</label>
+              <input type="text" id="txVoucher" class="form-control form-control-sm" placeholder="V-102" required>
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Movement Type</label>
-              <select id="txType" class="form-select form-select-sm" onchange="togglePriceField()">
+              <select id="txType" class="form-select form-select-sm" onchange="toggleInvoiceField()">
                 <option value="INBOUND">INBOUND (وارد - Invoiced)</option>
-                <option value="OUTBOUND">OUTBOUND (صادر - Returning)</option>
+                <option value="OUTBOUND">OUTBOUND (صادر - Dispatched)</option>
               </select>
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Quantity</label>
               <input type="number" id="txQty" class="form-control form-control-sm" placeholder="100" required>
             </div>
-            <div class="col-md-3" id="invoiceAmountContainer">
-              <label class="form-label small fw-semibold">Total Incoming Invoice Amount (SAR)</label>
+            <div class="col-md-2" id="invoiceAmountContainer">
+              <label class="form-label small fw-semibold">Total Invoice (SAR)</label>
               <input type="number" step="0.01" id="txInvoiceAmt" class="form-control form-control-sm" placeholder="2500.00">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2" id="costCentreContainer" style="display:none;">
               <label class="form-label small fw-semibold">Cost Centre (مركز تكلفة)</label>
-              <input type="text" id="txCostCentre" class="form-control form-control-sm" value="Main WH" required>
+              <input type="text" id="txCostCentre" class="form-control form-control-sm" value="Main WH">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">Date Day (يوم 1-31)</label>
+              <input type="number" id="txDay" class="form-control form-control-sm" min="1" max="31" placeholder="29" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">Remarks (ملاحظات)</label>
+              <input type="text" id="txRemarks" class="form-control form-control-sm" placeholder="Optional notes">
             </div>
             <div class="col-md-3 d-flex align-items-end">
               <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
@@ -224,7 +242,7 @@
                   <th>Outstanding Qty<br>كمية ممتازة</th>
                   <th>Outstanding Amount<br>المبلغ المستحق</th>
                   <th>Average Price<br>متوسط السعر</th>
-                  <th>Cost Centre<br>مركز تكلفة</th>
+                  <th>Cost Centre / Remarks</th>
                 </tr>
               </thead>
               <tbody id="transactionTableBody">
@@ -299,9 +317,10 @@
     ];
 
     let transactions = [
-      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH" }
+      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
     ];
 
+    let currentFilterCode = null;
     let chartInstance = null;
 
     function handleLogin(e) {
@@ -327,28 +346,67 @@
       myModal.show();
     }
 
-    function togglePriceField() {
+    function toggleInvoiceField() {
       const type = document.getElementById('txType').value;
-      const container = document.getElementById('invoiceAmountContainer');
+      const invoiceContainer = document.getElementById('invoiceAmountContainer');
+      const costContainer = document.getElementById('costCentreContainer');
       if (type === 'OUTBOUND') {
-        container.style.display = 'none';
+        invoiceContainer.style.display = 'none';
+        costContainer.style.display = 'block';
       } else {
-        container.style.display = 'block';
+        invoiceContainer.style.display = 'block';
+        costContainer.style.display = 'none';
       }
     }
 
-    function jumpToTransactions(code) {
+    // Step 1: Click from Opening Balance -> goes to Item Index
+    function goToItemIndex(code) {
+      const triggerEl = document.querySelector('#index-tab');
+      const tab = new bootstrap.Tab(triggerEl);
+      tab.show();
+    }
+
+    // Step 2: Click from Item Index -> goes to Transactions filtered for that item
+    function goToTransactions(code) {
+      currentFilterCode = code;
       const triggerEl = document.querySelector('#tx-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
       document.getElementById('txItemCode').value = code;
+      document.getElementById('txFilterSelect').value = code;
+      renderTransactionTable();
+    }
+
+    function resetTxFilter() {
+      currentFilterCode = null;
+      document.getElementById('txFilterSelect').value = "";
+      renderTransactionTable();
+    }
+
+    function filterTransactionsByDropdown(code) {
+      if (!code) {
+        currentFilterCode = null;
+      } else {
+        currentFilterCode = code;
+        document.getElementById('txItemCode').value = code;
+      }
+      renderTransactionTable();
     }
 
     function renderAll() {
       renderOpeningBalanceTable();
       renderItemIndexTable();
       renderTransactionTable();
+      populateDropdown();
       updateBannerTotals();
+    }
+
+    function populateDropdown() {
+      const select = document.getElementById('txFilterSelect');
+      select.innerHTML = '<option value="">-- Search / Filter Item --</option>';
+      inventoryCatalog.forEach(item => {
+        select.innerHTML += `<option value="${item.code}">${item.code} - ${item.desc}</option>`;
+      });
     }
 
     function updateBannerTotals() {
@@ -365,7 +423,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
-          <td class="text-center"><span class="clickable-item" onclick="jumpToTransactions('${item.code}')">${item.code}</span></td>
+          <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
           <td class="fw-semibold">${item.desc}</td>
           <td class="text-end">${(parseFloat(item.openQty) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end">${(parseFloat(item.openAmt) || 0) > 0 ? (parseFloat(item.openAmt)).toLocaleString(undefined, {minimumFractionDigits: 2}) : '0'}</td>
@@ -388,7 +446,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
-          <td class="text-center"><span class="clickable-item" onclick="jumpToTransactions('${item.code}')">${item.code}</span></td>
+          <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
           <td class="fw-semibold">${item.desc}</td>
           <td class="text-end">${openQ.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end">${out.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -396,7 +454,7 @@
           <td class="text-end fw-bold text-success">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
           <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="jumpToTransactions('${item.code}')">+ Add Entry</button>
+            <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Entry</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -406,7 +464,10 @@
     function renderTransactionTable() {
       const tbody = document.getElementById('transactionTableBody');
       tbody.innerHTML = '';
-      transactions.forEach((tx, index) => {
+      
+      const filteredTxs = currentFilterCode ? transactions.filter(tx => tx.code === currentFilterCode) : transactions;
+
+      filteredTxs.forEach((tx, index) => {
         const out = parseFloat(tx.outQty) || 0;
         const openQ = parseFloat(tx.openQty) || 0;
         const openA = parseFloat(tx.openAmt) || 0;
@@ -428,10 +489,15 @@
           <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
           <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
           <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
-          <td>${tx.costCentre}</td>
+          <td>${tx.costCentre || tx.remarks || '-'}</td>
         `;
         tbody.appendChild(tr);
       });
+
+      // Set default selected code in form if not set
+      if (!document.getElementById('txItemCode').value && inventoryCatalog.length > 0) {
+        document.getElementById('txItemCode').value = inventoryCatalog[0].code;
+      }
     }
 
     function addNewItem(e) {
@@ -463,46 +529,51 @@
     function submitTransaction(e) {
       e.preventDefault();
       const code = document.getElementById('txItemCode').value;
+      const voucher = document.getElementById('txVoucher').value;
       const type = document.getElementById('txType').value;
       const qty = parseFloat(document.getElementById('txQty').value) || 0;
       const invoiceAmt = parseFloat(document.getElementById('txInvoiceAmt').value) || 0;
       const costCentre = document.getElementById('txCostCentre').value;
+      const remarks = document.getElementById('txRemarks').value;
+      const dayInput = document.getElementById('txDay').value;
+
+      // Format date as 2026-10-XX
+      const formattedDay = String(dayInput).padStart(2, '0');
+      const dateStr = `2026-10-${formattedDay}`;
 
       const found = inventoryCatalog.find(i => i.code === code);
-      const desc = found ? found.desc : "General Stock Item";
-      const openQty = found ? found.openQty : 0;
-      const openAmt = found ? found.openAmt : 0;
+      if (!found) {
+        alert('Please select a valid item code.');
+        return;
+      }
 
-      // If INBOUND, add invoice amount to opening amount / valuation
-      if (type === 'INBOUND' && invoiceAmt > 0) {
-        if (found) {
-          found.openAmt = (parseFloat(found.openAmt) || 0) + invoiceAmt;
-          found.openQty = (parseFloat(found.openQty) || 0) + qty;
-          found.receivedQty = (parseFloat(found.receivedQty) || found.openQty) + qty;
-        }
+      if (type === 'INBOUND') {
+        found.openAmt = (parseFloat(found.openAmt) || 0) + invoiceAmt;
+        found.openQty = (parseFloat(found.openQty) || 0) + qty;
+        found.receivedQty = (parseFloat(found.receivedQty) || found.openQty) + qty;
       } else if (type === 'OUTBOUND') {
-        if (found) {
-          found.outQty = (parseFloat(found.outQty) || 0) + qty;
-        }
+        found.outQty = (parseFloat(found.outQty) || 0) + qty;
       }
 
       const newTx = {
         code: code,
-        desc: desc,
-        openQty: found ? found.openQty : openQty,
-        openAmt: found ? found.openAmt : openAmt,
-        date: new Date().toISOString().split('T')[0],
-        voucher: 'V-' + Math.floor(1000 + Math.random() * 9000),
+        desc: found.desc,
+        openQty: found.openQty,
+        openAmt: found.openAmt,
+        date: dateStr,
+        voucher: voucher,
         inQty: type === 'INBOUND' ? qty : 0,
         outQty: type === 'OUTBOUND' ? qty : 0,
-        costCentre: costCentre
+        costCentre: type === 'OUTBOUND' ? costCentre : '',
+        remarks: type === 'INBOUND' ? remarks : ''
       };
 
       transactions.push(newTx);
       renderAll();
       document.getElementById('txForm').reset();
-      togglePriceField();
-      alert('Transaction movement successfully recorded and automatically updated!');
+      document.getElementById('txItemCode').value = code; // Keep selected item
+      toggleInvoiceField();
+      alert('Transaction movement successfully recorded and updated!');
     }
 
     function renderContributionChart() {
