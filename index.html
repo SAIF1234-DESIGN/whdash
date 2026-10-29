@@ -79,12 +79,12 @@
           <label class="fw-bold text-primary mb-0">📅 Master Active Month Selector:</label>
           <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 180px;">
             <option value="2026-09">September 2026</option>
-            <option value="2026-10" selected>October 2026</option>
-            <option value="2026-11">November 2026</option>
-            <option value="2026-12">December 2026</option>
+            <option value="2026-10" selected>October 2026 (Current)</option>
+            <option value="2026-11">November 2026 (Future)</option>
+            <option value="2026-12">December 2026 (Future)</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted">(Master-filters Opening Balance, Item Index, and Transactions)</small>
+          <small class="text-muted">(Future/unended months without data show completely blank)</small>
         </div>
         <div class="d-flex gap-2 align-items-center">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
@@ -341,13 +341,13 @@
       { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
     ];
 
-    let explicitOpenBalances = {}; // Stores manual/file uploaded opening balances per month (e.g. {'2026-11': { '763225': { qty: 4000, amt: 100 } } })
+    let explicitOpenBalances = {}; 
 
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
 
-    const CURRENT_ACTIVE_MONTH = '2026-10'; // Current active month system clock
+    const CURRENT_ACTIVE_MONTH = '2026-10'; // Current system clock month (October 2026)
 
     function initDashboard() {
       renderAll();
@@ -487,22 +487,27 @@
       });
     }
 
-    function isMonthEnded(targetMonth) {
+    function hasMonthData(targetMonth) {
       if (targetMonth === 'ALL') return true;
-      // If targetMonth is strictly before CURRENT_ACTIVE_MONTH, it's ended.
-      return targetMonth < CURRENT_ACTIVE_MONTH;
+      // Future or unended months without explicit upload/transactions have no data -> return false (blank)
+      if (targetMonth > CURRENT_ACTIVE_MONTH) {
+        return explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0;
+      }
+      // Past or current month: check if explicit upload or transactions exist
+      if (explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0) return true;
+      if (targetMonth === '2026-10' || targetMonth === '2026-09') return true; // base loaded months
+      
+      const monthTxs = transactions.filter(tx => tx.date.startsWith(targetMonth));
+      return monthTxs.length > 0;
     }
 
     function getRolloverStats(itemCode, targetMonth) {
-      if (targetMonth === '2026-09' || targetMonth === '2026-10') {
-        if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
-          return explicitOpenBalances[targetMonth][itemCode];
-        }
+      if (!hasMonthData(targetMonth)) {
+        return { openQty: null, openAmt: null }; // signifies blank/no inventory
       }
 
-      // If month is not ended yet (e.g. future or current unended month), opening balance is blank (0) unless explicitly uploaded
-      if (!isMonthEnded(targetMonth) && targetMonth !== CURRENT_ACTIVE_MONTH) {
-        return { openQty: 0, openAmt: 0 };
+      if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
+        return explicitOpenBalances[targetMonth][itemCode];
       }
 
       if (targetMonth === '2026-09') {
@@ -525,8 +530,14 @@
     }
 
     function getItemStats(itemCode, selectedMonth) {
+      if (!hasMonthData(selectedMonth)) {
+        return { openQty: null, inQty: 0, outQty: 0, outstandingQty: null, outstandingAmt: null, avgPrice: 0, qtyDiff: 0 };
+      }
+
       const itemTxs = transactions.filter(tx => tx.code === itemCode);
       const rollover = getRolloverStats(itemCode, selectedMonth);
+      if (rollover.openQty === null) return { openQty: null, inQty: 0, outQty: 0, outstandingQty: null, outstandingAmt: null, avgPrice: 0, qtyDiff: 0 };
+
       const openQty = rollover.openQty;
       const openAmt = rollover.openAmt;
 
@@ -562,12 +573,20 @@
       
       document.getElementById('bannerMonthLabel').innerText = monthText;
 
+      if (!hasMonthData(selectedMonth)) {
+        document.getElementById('bannerQty').innerText = "0.00";
+        document.getElementById('bannerAmt').innerText = "0.00";
+        return;
+      }
+
       let totalQty = 0;
       let totalAmt = 0;
       inventoryCatalog.forEach(item => {
         const stats = getItemStats(item.code, selectedMonth);
-        totalQty += stats.outstandingQty;
-        totalAmt += stats.outstandingAmt;
+        if (stats.outstandingQty !== null) {
+          totalQty += stats.outstandingQty;
+          totalAmt += stats.outstandingAmt;
+        }
       });
       document.getElementById('bannerQty').innerText = totalQty.toLocaleString(undefined, {minimumFractionDigits: 2});
       document.getElementById('bannerAmt').innerText = totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -581,6 +600,11 @@
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
       document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : 'October 2026';
 
+      // If month has no data, leave table completely blank as requested
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       const searchQuery = (document.getElementById('openingSearch').value || '').toLowerCase();
       const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
 
@@ -592,6 +616,8 @@
 
       paginated.forEach((item, index) => {
         const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
@@ -613,6 +639,11 @@
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
 
+      // If month has no data, leave table completely blank
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       let catalogToRender = [...inventoryCatalog];
       if (currentIndexFilterCode) {
         const query = currentIndexFilterCode.toLowerCase();
@@ -621,6 +652,7 @@
 
       catalogToRender.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
+        if (stats.outstandingQty === null) return;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -647,20 +679,27 @@
       const tbody = document.getElementById('transactionTableBody');
       tbody.innerHTML = '';
       
+      const masterSelect = document.getElementById('masterMonthSelect');
+      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+
+      // If month has no data, leave table completely blank
+      if (!hasMonthData(selectedMonth)) {
+        return;
+      }
+
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
       if (currentTxFilterCode) {
         sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentTxFilterCode.toLowerCase() || i.desc.toLowerCase().includes(currentTxFilterCode.toLowerCase()));
       }
 
-      const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
-
       let globalSn = 1;
       const today = new Date('2026-10-29');
 
       sortedCatalog.forEach(item => {
         const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
         const itemTxs = transactions.filter(tx => {
           if (tx.code !== item.code) return false;
           if (selectedMonth !== 'ALL' && !tx.date.startsWith(selectedMonth)) return false;
@@ -763,7 +802,7 @@
       const masterMonth = document.getElementById('masterMonthSelect').value;
 
       if (!inventoryCatalog.some(i => i.code === code)) {
-        inventoryCatalog.push({ code, desc, openQty, openAmt });
+        inventoryCatalog.push({ code, desc, openQty: 0, openAmt: 0 });
       }
 
       if (masterMonth !== 'ALL') {
@@ -784,7 +823,7 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
+      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", CURRENT_ACTIVE_MONTH);
       if (!uploadMonth) return;
 
       const reader = new FileReader();
@@ -894,7 +933,9 @@
       
       inventoryCatalog.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
-        csvContent += `${index + 1},${item.code},"${item.desc}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+        if (stats.outstandingQty !== null) {
+          csvContent += `${index + 1},${item.code},"${item.desc}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+        }
       });
 
       const encodedUri = encodeURI(csvContent);
