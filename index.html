@@ -84,7 +84,7 @@
             <option value="2026-12">December 2026 (Future)</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted">(Future/unended months without data show completely blank)</small>
+          <small class="text-muted">(Months without opening balances or transactions show completely blank)</small>
         </div>
         <div class="d-flex gap-2 align-items-center">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
@@ -143,7 +143,7 @@
                 </tr>
               </thead>
               <tbody id="openingBalanceTableBody">
-                <!-- Dynamically populated -->
+                <!-- Dynamically populated or blank -->
               </tbody>
             </table>
           </div>
@@ -178,7 +178,7 @@
                 </tr>
               </thead>
               <tbody id="itemIndexTableBody">
-                <!-- Dynamically populated -->
+                <!-- Dynamically populated or blank -->
               </tbody>
             </table>
           </div>
@@ -267,7 +267,7 @@
                 </tr>
               </thead>
               <tbody id="transactionTableBody">
-                <!-- Dynamically populated -->
+                <!-- Dynamically populated or blank -->
               </tbody>
             </table>
           </div>
@@ -341,13 +341,11 @@
       { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
     ];
 
-    let explicitOpenBalances = {}; 
+    let explicitOpenBalances = {}; // Stores manual/file uploaded opening balances per month e.g. {'2026-10': {...}}
 
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
-
-    const CURRENT_ACTIVE_MONTH = '2026-10'; // Current system clock month (October 2026)
 
     function initDashboard() {
       renderAll();
@@ -489,28 +487,28 @@
 
     function hasMonthData(targetMonth) {
       if (targetMonth === 'ALL') return true;
-      // Future or unended months without explicit upload/transactions have no data -> return false (blank)
-      if (targetMonth > CURRENT_ACTIVE_MONTH) {
-        return explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0;
-      }
-      // Past or current month: check if explicit upload or transactions exist
+      // Check if explicit opening balances were created for this month
       if (explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0) return true;
-      if (targetMonth === '2026-10' || targetMonth === '2026-09') return true; // base loaded months
-      
+      // Check if any transactions occurred in this month
       const monthTxs = transactions.filter(tx => tx.date.startsWith(targetMonth));
-      return monthTxs.length > 0;
+      if (monthTxs.length > 0) return true;
+      // Default initial loaded month (October 2026 or September 2026 baseline)
+      if (targetMonth === '2026-10' && inventoryCatalog.length > 0) return true;
+      if (targetMonth === '2026-09' && inventoryCatalog.length > 0) return true;
+      
+      return false;
     }
 
     function getRolloverStats(itemCode, targetMonth) {
       if (!hasMonthData(targetMonth)) {
-        return { openQty: null, openAmt: null }; // signifies blank/no inventory
+        return { openQty: null, openAmt: null };
       }
 
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      if (targetMonth === '2026-09') {
+      if (targetMonth === '2026-09' || targetMonth === '2026-10') {
         const item = inventoryCatalog.find(i => i.code === itemCode);
         return {
           openQty: item ? parseFloat(item.openQty) || 0 : 0,
@@ -600,7 +598,7 @@
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
       document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : 'October 2026';
 
-      // If month has no data, leave table completely blank as requested
+      // If month has no data/transactions/opening balances, leave table completely blank
       if (!hasMonthData(selectedMonth)) {
         return;
       }
@@ -639,7 +637,6 @@
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
 
-      // If month has no data, leave table completely blank
       if (!hasMonthData(selectedMonth)) {
         return;
       }
@@ -682,7 +679,6 @@
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
 
-      // If month has no data, leave table completely blank
       if (!hasMonthData(selectedMonth)) {
         return;
       }
@@ -823,7 +819,7 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", CURRENT_ACTIVE_MONTH);
+      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
       if (!uploadMonth) return;
 
       const reader = new FileReader();
