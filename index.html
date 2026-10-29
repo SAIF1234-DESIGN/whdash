@@ -178,7 +178,7 @@
                   <th data-i18n="thItemDescAr">Item Name (Arabic)<br><small>اسم الصنف (عربي)</small></th>
                   <th style="width: 160px;" data-i18n="thOpeningBal">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
                   <th style="width: 160px;" data-i18n="thOpeningAmt">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
-                  <th style="width: 90px;" data-i18n="thActions">Actions<br><small>الإجراءات</small></th>
+                  <th style="width: 90px;" data-i18n="thActions" id="openingActionHeader">Actions<br><small>الإجراءات</small></th>
                 </tr>
               </thead>
               <tbody id="openingBalanceTableBody">
@@ -349,11 +349,11 @@
             </div>
             <div class="mb-3">
               <label class="form-label fw-semibold" data-i18n="labelModalDescEn">Item Description (English)</label>
-              <input type="text" id="newDescEn" class="form-control" oninput="autoTranslateField('en')">
+              <input type="text" id="newDescEn" class="form-control" placeholder="Leave blank for auto-translation">
             </div>
             <div class="mb-3">
               <label class="form-label fw-semibold" data-i18n="labelModalDescAr">Item Description (Arabic / عربي)</label>
-              <input type="text" id="newDescAr" class="form-control" oninput="autoTranslateField('ar')">
+              <input type="text" id="newDescAr" class="form-control" placeholder="اتركه فارغاً للترجمة التلقائية">
             </div>
             <div class="mb-3">
               <label class="form-label fw-semibold" data-i18n="labelModalQty">Opening Balance (الرصيد الافتتاحي)</label>
@@ -517,53 +517,44 @@
     };
 
     let currentLang = 'en';
-    let activeTabName = 'opening'; 
+    let activeTabName = 'opening';
     let currentUser = null; 
 
-    // Users Database: Admin & Clerk
+    // Users Database
     const USERS = {
       "kassarsaif@gmail.com": { pass: "72724@Whdash", role: "admin", name: "System Admin" },
       "clerk@gmail.com": { pass: "Noor@123", role: "clerk", name: "Staff Clerk" },
       "clerk@noor.com": { pass: "Noor@123", role: "clerk", name: "Staff Clerk" }
     };
 
-    // Dictionary for Auto-Translation between English and Arabic
-    const TRANSLATION_MAP = {
+    // Dictionary for Auto-Translating Item Descriptions between English & Arabic
+    const dictionary = {
       "black gypsum screw": "برغى جبس اسود خشن",
-      "stickers 95": "استيكرات 95",
-      "stickers diesel": "استيكرات ديزل",
-      "letterhead": "ترويسة خطاب",
+      "stickers 95 noor khawi": "استيكرات 95 نور خوي",
+      "letterhead (noor)": "ترويسة خطاب (النور)",
+      "stickers diesel noor khawi": "استيكرات ديزل نور خوي",
       "cleaning oil": "زيت منظف",
       "diesel": "ديزل",
-      "gasoline": "بنزين",
+      "petrol": "بنزين",
       "oil": "زيت",
       "screw": "برغي",
       "sticker": "استيكر"
     };
 
-    function autoTranslateField(sourceLang) {
-      const descEnInput = document.getElementById('newDescEn');
-      const descArInput = document.getElementById('newDescAr');
-
-      if (sourceLang === 'en') {
-        let val = descEnInput.value.trim().toLowerCase();
-        if (val && !descArInput.value.trim()) {
-          // Check map or smart translation
-          let translated = TRANSLATION_MAP[val] || capitalizeFirst(descEnInput.value);
-          descArInput.value = translated;
+    function autoTranslateText(text, targetLang) {
+      if (!text) return "";
+      let clean = text.trim().toLowerCase();
+      if (targetLang === 'ar') {
+        if (dictionary[clean]) return dictionary[clean];
+        // Fallback / basic mapping
+        return text;
+      } else {
+        // Find key by value
+        for (let k in dictionary) {
+          if (dictionary[k] === text.trim()) return k.toUpperCase();
         }
-      } else if (sourceLang === 'ar') {
-        let val = descArInput.value.trim();
-        if (val && !descEnInput.value.trim()) {
-          // Find reverse or fallback
-          let foundEn = Object.keys(TRANSLATION_MAP).find(k => TRANSLATION_MAP[k] === val);
-          descEnInput.value = foundEn ? capitalizeFirst(foundEn) : val;
-        }
+        return text;
       }
-    }
-
-    function capitalizeFirst(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
     function initDashboard() {
@@ -618,19 +609,16 @@
       const addItemBtn = document.getElementById('addItemTriggerBtn');
       const uploadContainer = document.getElementById('uploadBtnContainer');
 
-      if (!currentUser) return;
-
       if (currentUser.role === 'admin') {
         roleBadge.innerText = "Administrator (Admin)";
         roleBadge.className = "badge bg-danger px-3 py-2";
         if (addItemBtn) addItemBtn.style.display = 'inline-block';
         if (uploadContainer) uploadContainer.style.display = 'inline-block';
       } else {
-        // Clerk can add items and upload balances, but cannot edit/delete existing inventory
-        roleBadge.innerText = "Staff Clerk (Data Entry)";
+        roleBadge.innerText = "Staff Clerk (Data Entry & Upload)";
         roleBadge.className = "badge bg-success px-3 py-2";
-        if (addItemBtn) addItemBtn.style.display = 'inline-block';
-        if (uploadContainer) uploadContainer.style.display = 'inline-block';
+        if (addItemBtn) addItemBtn.style.display = 'inline-block'; // Clerk CAN add items & upload now
+        if (uploadContainer) uploadContainer.style.display = 'inline-block'; // Clerk CAN upload opening balances now
       }
     }
 
@@ -683,7 +671,7 @@
       const todayStr = new Date().toISOString().split('T')[0];
       const dateInput = document.getElementById('txDateInput');
       if (dateInput) {
-        dateInput.max = todayStr; // Block future dates
+        dateInput.max = todayStr;
         dateInput.value = todayStr;
       }
     }
@@ -753,9 +741,8 @@
     }
 
     function deleteItem(code) {
-      // Only Admin can delete items
       if (!currentUser || currentUser.role !== 'admin') {
-        alert("Access Denied: Only Admin can delete items. Clerks do not have delete permissions.");
+        alert("Access Denied: Only Admin can delete items (Clerk is not allowed to edit or delete inventory).");
         return;
       }
       if (confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الصنف ${code}؟` : `Are you sure you want to delete item code ${code}?`)) {
@@ -1057,7 +1044,6 @@
         if (rollover.openQty === null) return;
 
         const canDelete = currentUser && currentUser.role === 'admin';
-        const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -1245,18 +1231,20 @@
 
     function addNewItem(e) {
       e.preventDefault();
-      // Both admin and clerk can add items
       const code = document.getElementById('newCode').value.trim();
       let descEn = document.getElementById('newDescEn').value.trim();
       let descAr = document.getElementById('newDescAr').value.trim();
       
+      // Auto-translate if one is left blank
       if (descEn && !descAr) {
-        let key = descEn.toLowerCase();
-        descAr = TRANSLATION_MAP[key] || descEn;
+        descAr = autoTranslateText(descEn, 'ar');
+      } else if (descAr && !descEn) {
+        descEn = autoTranslateText(descAr, 'en');
       }
-      if (descAr && !descEn) {
-        let foundEn = Object.keys(TRANSLATION_MAP).find(k => TRANSLATION_MAP[k] === descAr);
-        descEn = foundEn ? capitalizeFirst(foundEn) : descAr;
+
+      if (!descEn && !descAr) {
+        descEn = "Item " + code;
+        descAr = "صنف " + code;
       }
 
       const openQty = parseFloat(document.getElementById('newOpenQty').value) || 0;
@@ -1304,9 +1292,11 @@
           if (parts.length >= 4) {
             const code = parts[0].trim();
             let descEn = parts[1].trim();
-            let descAr = parts.length >= 5 ? parts[2].trim() : descEn;
-            if (descEn && !descAr) descAr = TRANSLATION_MAP[descEn.toLowerCase()] || descEn;
-            if (descAr && !descEn) descEn = descAr;
+            let descAr = parts.length >= 5 ? parts[2].trim() : "";
+            
+            if (descEn && !descAr) descAr = autoTranslateText(descEn, 'ar');
+            if (descAr && !descEn) descEn = autoTranslateText(descAr, 'en');
+
             const openQty = parseFloat(parts[parts.length >= 5 ? 3 : 2]) || 0;
             const openAmt = parseFloat(parts[parts.length >= 5 ? 4 : 3]) || 0;
             
@@ -1346,4 +1336,188 @@
       }
 
       if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
-        alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' :
+        alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' : 'Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
+        return;
+      }
+
+      const found = inventoryCatalog.find(i => i.code === code);
+      if (!found) {
+        alert(currentLang === 'ar' ? 'الرجاء إدخال أو اختيار رمز صنف صحيح.' : 'Please enter or select a valid item code.');
+        return;
+      }
+
+      if (editId) {
+        const txIndex = transactions.findIndex(t => t.id == editId);
+        if (txIndex !== -1) {
+          transactions[txIndex] = {
+            id: parseInt(editId),
+            code: code,
+            descEn: found.descEn,
+            descAr: found.descAr,
+            date: dateStr,
+            voucher: voucher,
+            inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
+            outQty: (type === 'OUTGOING' || type === 'OUTBOUND') ? qty : 0,
+            invoiceAmt: type === 'INBOUND' ? invoiceAmt : 0,
+            costCentre: costCentre,
+            station: station,
+            remarks: remarks
+          };
+        }
+        document.getElementById('editTxId').value = '';
+        document.getElementById('txSubmitBtn').innerText = translations[currentLang].postEntryBtn;
+      } else {
+        const stats = getItemStats(code, 'ALL');
+        const newTx = {
+          id: Date.now(),
+          code: code,
+          descEn: found.descEn,
+          descAr: found.descAr,
+          date: dateStr,
+          voucher: voucher,
+          inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
+          outQty: (type === 'OUTGOING' || type === 'OUTBOUND') ? qty : 0,
+          invoiceAmt: type === 'INBOUND' ? invoiceAmt : (type === 'RETURN' ? qty * stats.avgPrice : 0),
+          costCentre: costCentre,
+          station: station,
+          remarks: type === 'INBOUND' ? remarks : (type === 'RETURN' ? 'Item Return' : '')
+        };
+        transactions.push(newTx);
+      }
+
+      renderAll();
+      document.getElementById('txForm').reset();
+      document.getElementById('txItemCode').value = code;
+      setupDateRestrictions();
+      toggleMovementFields();
+      alert(currentLang === 'ar' ? 'تم تسجيل وتحديث الحركة بنجاح!' : 'Transaction successfully recorded and updated!');
+    }
+
+    function downloadStockMovementReport() {
+      const masterSelect = document.getElementById('masterMonthSelect');
+      const selectedMonth = masterSelect ? masterSelect.value : '';
+      
+      let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Opening Balance,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price\n";
+      
+      inventoryCatalog.forEach((item, index) => {
+        const stats = getItemStats(item.code, selectedMonth);
+        if (stats.outstandingQty !== null) {
+          csvContent += `${index + 1},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+        }
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Stock_Movement_Summary_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function downloadStockLedgerReport() {
+      const masterSelect = document.getElementById('masterMonthSelect');
+      const selectedMonth = masterSelect ? masterSelect.value : '';
+
+      let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Date,Voucher No,Movement Type,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price,Location/Station,Remarks\n";
+      
+      let globalSn = 1;
+      inventoryCatalog.forEach(item => {
+        const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
+        const itemTxs = transactions.filter(tx => {
+          if (tx.code !== item.code) return false;
+          if (selectedMonth !== 'ALL' && !tx.date.startsWith(selectedMonth)) return false;
+          return true;
+        }).sort((a, b) => a.date.localeCompare(b.date));
+
+        const openQ = rollover.openQty;
+        const openA = rollover.openAmt;
+
+        csvContent += `${globalSn++},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${selectedMonth === 'ALL' ? '2026-10-01' : selectedMonth + '-01'},OPENING,OPENING,0,0,${openQ},${openA.toFixed(2)},${openQ > 0 ? (openA/openQ).toFixed(2) : 0},"Main WH","Opening Balance"\n`;
+
+        let runningQty = openQ;
+        let runningAmt = openA;
+
+        itemTxs.forEach(tx => {
+          let inQ = tx.inQty || 0;
+          let outQ = tx.outQty || 0;
+          let mType = inQ > 0 ? 'INBOUND' : (outQ > 0 ? 'OUTGOING' : 'MOVEMENT');
+
+          if (inQ > 0) {
+            runningQty += inQ;
+            runningAmt += tx.invoiceAmt || 0;
+          }
+          if (outQ > 0) {
+            let avgP = runningQty > 0 ? runningAmt / runningQty : 0;
+            runningQty -= outQ;
+            runningAmt -= outQ * avgP;
+          }
+          let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
+          let loc = tx.station || tx.costCentre || '-';
+
+          csvContent += `${globalSn++},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${tx.date},${tx.voucher},${mType},${inQ},${outQ},${runningQty},${runningAmt.toFixed(2)},${currentAvg.toFixed(2)},"${loc}","${tx.remarks || ''}"\n`;
+        });
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Stock_Ledger_Report_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function downloadUploadTemplate() {
+      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00";
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", "Inventory_Upload_Template.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function renderContributionChart() {
+      const ctx = document.getElementById('contributionChart').getContext('2d');
+      const rankedItems = [...inventoryCatalog]
+        .map(item => {
+          const stats = getItemStats(item.code, 'ALL');
+          const totalIn = stats.openQty + stats.inQty;
+          const ratio = totalIn > 0 ? ((stats.outQty / totalIn) * 100).toFixed(1) : 0;
+          const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
+          return { desc: displayName, ratio: parseFloat(ratio) };
+        })
+        .sort((a, b) => b.ratio - a.ratio)
+        .slice(0, 20);
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: rankedItems.map(i => i.desc),
+          datasets: [{
+            label: currentLang === 'ar' ? 'نسبة الصادر إلى الوارد الإجمالي (%)' : 'Outgoing vs Total Received Contribution Ratio (%)',
+            data: rankedItems.map(i => i.ratio),
+            backgroundColor: '#1a365d',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: currentLang === 'ar' ? 'نسبة المساهمة (%)' : 'Contribution Ratio (%)' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
