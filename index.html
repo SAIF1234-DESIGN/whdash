@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Al Noor United Fuel Est - Global Warehouse Dashboard</title>
+  <title>Al Noor United Fuel Est - Main Warehouse Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,35 +19,44 @@
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
     }
-    .kpi-card {
-      background: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-      border-left: 5px solid #0d6efd;
-      transition: transform 0.2s ease;
+    .top-banner {
+      background: #ffeb3b;
+      color: #000;
+      font-weight: bold;
+      padding: 8px;
+      text-align: center;
+      font-size: 0.95rem;
+      border-bottom: 2px solid #ddd;
     }
-    .kpi-card:hover { transform: translateY(-2px); }
-    .kpi-card.blue { border-left-color: #0d6efd; }
-    .kpi-card.green { border-left-color: #198754; }
-    .kpi-card.yellow { border-left-color: #ffc107; }
-    .table th {
-      font-weight: 600;
-      color: #555;
-      font-size: 0.9rem;
+    .table thead th {
+      background-color: #1a365d !important;
+      color: #fff !important;
+      font-size: 0.85rem;
+      border: 1px solid #2a4365;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .table td {
+      font-size: 0.85rem;
+      vertical-align: middle;
+    }
+    .clickable-item {
+      color: #0d6efd;
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN CARD SECTION -->
+  <!-- LOGIN SECTION -->
   <div id="loginSection" class="card login-card p-4">
     <div class="text-center mb-3">
       <h4 class="text-primary fw-bold mb-1">مؤسسة النور المتحدة للوقود</h4>
-      <p class="text-muted small mb-0">Al Noor United Fuel Est - Cross-Border Portal</p>
+      <p class="text-muted small mb-0">Al Noor United Fuel Est - Portal</p>
     </div>
-    
     <div id="alertMsg" class="alert alert-danger d-none" role="alert"></div>
-    
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="mb-3">
         <label for="email" class="form-label fw-semibold">Email ID</label>
@@ -62,232 +71,419 @@
   </div>
 
   <!-- MAIN DASHBOARD SECTION -->
-  <div id="dashboardSection" class="container py-4 d-none">
-    <!-- Header Navbar -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-      <div>
-        <h3 class="fw-bold mb-1 text-dark">Live Warehouse Stock & Transaction Dashboard</h3>
-        <small class="text-muted"><span class="badge bg-success">● Live Sync</span> Delhi ↔ Riyadh | Al Noor United Fuel Est</small>
+  <div id="dashboardSection" class="container-fluid py-3 px-4 d-none">
+    
+    <!-- Top Summary Banner -->
+    <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
+      Total opening quantity as of 01/10/2026 was 272,750.84 &nbsp;|&nbsp; Total opening amount as of 01/10/2026 was SAR 796,973.12
+    </div>
+
+    <!-- Company Header Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm">
+      <div class="d-flex align-items-center gap-3">
+        <div>
+          <h4 class="fw-bold mb-0 text-primary">مؤسسة النور المتحدة للوقود</h4>
+          <h5 class="fw-bold mb-0 text-dark">Al Noor United Fuel Est</h5>
+          <small class="text-muted">حالة التوزيع الموحد لعام 2026 | Main Warehouse / Southern Warehouse Stock Sheet</small>
+        </div>
       </div>
       <div class="d-flex align-items-center gap-3">
-        <select id="roleSelector" class="form-select form-select-sm" onchange="toggleView()">
-          <option value="riyadh">View: Riyadh Manager Dashboard</option>
-          <option value="delhi">View: Delhi Data Entry Panel</option>
+        <select id="activeTab" class="form-select form-select-sm fw-bold border-primary" onchange="switchTab()">
+          <option value="openingBalance">1. Opening Balance (الرصيد الافتتاحي)</option>
+          <option value="itemIndex">2. Item Index (سجل الأصناف)</option>
+          <option value="transactions">3. Transactions / Item Card (حركة الأصناف)</option>
+          <option value="analytics">4. Top 20 Outgoing Contribution Ratio (تحليل الصادر)</option>
         </select>
-        <span class="badge bg-light text-dark border px-3 py-2" id="userBadge">Clerk</span>
+        <span class="badge bg-secondary px-3 py-2" id="userBadge">Clerk</span>
         <button onclick="logout()" class="btn btn-outline-danger btn-sm fw-semibold">Logout</button>
       </div>
     </div>
 
-    <!-- DELHI DATA ENTRY PANEL -->
-    <div id="delhiSection" class="card p-4 shadow-sm mb-4 border-0 d-none">
-      <h5 class="fw-bold text-primary mb-3">📍 Delhi Data Entry Panel</h5>
-      <form id="entryForm" onsubmit="submitTransaction(event)">
-        <div class="row g-3">
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Item Code</label>
-            <input type="text" id="itemCode" class="form-control" placeholder="e.g. 763225" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Type</label>
-            <select id="transType" class="form-select">
-              <option value="INBOUND">INBOUND (Received)</option>
-              <option value="OUTBOUND">OUTBOUND (Dispatched)</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Quantity</label>
-            <input type="number" id="transQty" class="form-control" placeholder="100" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label small fw-semibold">Unit Price (SAR)</label>
-            <input type="number" step="0.01" id="unitPrice" class="form-control" placeholder="25.50" required>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary fw-bold mt-3 w-100">Broadcast Transaction to Cloud</button>
-      </form>
+    <!-- TAB 1: OPENING BALANCE SHEET -->
+    <div id="tabOpeningBalance" class="card p-3 shadow-sm border-0 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-primary mb-0">📦 Opening Balance Sheet (01/10/2026)</h5>
+        <button class="btn btn-sm btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#addItemModal">+ Add New Inventory Item</button>
+      </div>
+      <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
+        <table class="table table-bordered table-hover align-middle">
+          <thead>
+            <tr>
+              <th style="width: 50px;">م SN<br><small>رقم</small></th>
+              <th style="width: 120px;">ItemCode<br><small>رمز الصنف</small></th>
+              <th>Item Name / Description<br><small>اسم المنتج / الوصف</small></th>
+              <th style="width: 180px;">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
+              <th style="width: 180px;">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
+            </tr>
+          </thead>
+          <tbody id="openingBalanceTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- RIYADH LIVE VIEW -->
-    <div id="riyadhSection">
-      <!-- KPI Summary Scorecards -->
-      <div class="row g-3 mb-4">
-        <div class="col-md-4">
-          <div class="kpi-card p-3 blue">
-            <span class="text-muted small fw-semibold">TOTAL OPENING QUANTITY</span>
-            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOpenQty">272,750.84</h3>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="kpi-card p-3 green">
-            <span class="text-muted small fw-semibold">TOTAL OUTSTANDING QUANTITY</span>
-            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOutstQty">272,750.84</h3>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="kpi-card p-3 yellow">
-            <span class="text-muted small fw-semibold">TOTAL VALUATION AMOUNT (SAR)</span>
-            <h3 class="fw-bold text-dark mt-2 mb-0" id="kpiOutstAmt">SAR 796,973.12</h3>
-          </div>
-        </div>
+    <!-- TAB 2: ITEM INDEX -->
+    <div id="tabItemIndex" class="card p-3 shadow-sm border-0 mb-4 d-none">
+      <h5 class="fw-bold text-primary mb-3">📊 Master Item Index & Outstanding Stock Sheet</h5>
+      <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
+        <table class="table table-bordered table-hover align-middle">
+          <thead>
+            <tr>
+              <th>م SN</th>
+              <th>Item Code<br>رمز الصنف</th>
+              <th>Item Name / Description<br>اسم المنتج / الوصف</th>
+              <th>Opening Balance<br>الرصيد الافتتاحي</th>
+              <th>Outgoing Quantity<br>الكمية الصادرة</th>
+              <th>Outstanding Quantity<br>كمية ممتازة</th>
+              <th>Outstanding Amount<br>المبلغ المستحق</th>
+              <th>Average Price<br>متوسط السعر</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="itemIndexTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <!-- Inventory Valuation Chart -->
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card p-4 shadow-sm border-0 rounded-3">
-            <h5 class="fw-bold mb-3 text-secondary">Top Inventory Items by Valuation (SAR)</h5>
-            <div class="chart-container" style="position: relative; height: 350px;">
-              <canvas id="inventoryChart"></canvas>
-            </div>
-          </div>
-        </div>
+    <!-- TAB 3: TRANSACTIONS / ITEM CARD -->
+    <div id="tabTransactions" class="card p-3 shadow-sm border-0 mb-4 d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-primary mb-0">📝 Real-Time Transactional Movement (Item Card)</h5>
       </div>
+      
+      <!-- Transaction Entry Form -->
+      <form id="txForm" onsubmit="submitTransaction(event)" class="row g-2 mb-3 p-3 bg-light rounded border">
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Item Code</label>
+          <input type="text" id="txItemCode" class="form-control form-control-sm" placeholder="763225" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Movement Type</label>
+          <select id="txType" class="form-select form-select-sm">
+            <option value="INBOUND">INBOUND (وارد)</option>
+            <option value="OUTBOUND">OUTBOUND (صادر)</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Quantity</label>
+          <input type="number" id="txQty" class="form-control form-control-sm" placeholder="100" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Unit Price / Value (SAR)</label>
+          <input type="number" step="0.01" id="txPrice" class="form-control form-control-sm" placeholder="25.00" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Cost Centre (مركز تكلفة)</label>
+          <input type="text" id="txCostCentre" class="form-control form-control-sm" value="Main WH" required>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
+        </div>
+      </form>
 
-      <!-- Inventory Data Table -->
+      <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table class="table table-bordered table-hover align-middle">
+          <thead>
+            <tr>
+              <th>SN</th>
+              <th>Item Code<br>رمز الصنف</th>
+              <th>Item Name / Description<br>اسم المنتج / الوصف</th>
+              <th>Opening Balance</th>
+              <th>Opening Amount</th>
+              <th>Date<br>تاريخ</th>
+              <th>Voucher No.<br>رقم القسيمة</th>
+              <th>Incoming Qty<br>الكمية الواردة</th>
+              <th>Outgoing Qty<br>الكمية الصادرة</th>
+              <th>Outstanding Qty<br>كمية ممتازة</th>
+              <th>Outstanding Amount<br>المبلغ المستحق</th>
+              <th>Average Price<br>متوسط السعر</th>
+              <th>Cost Centre<br>مركز تكلفة</th>
+            </tr>
+          </thead>
+          <tbody id="transactionTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: ANALYTICS / TOP 20 OUTGOING RATIO -->
+    <div id="tabAnalytics" class="card p-4 shadow-sm border-0 mb-4 d-none">
+      <h5 class="fw-bold text-primary mb-3">📈 Top 20 Outgoing Items Contribution Ratios</h5>
       <div class="row">
         <div class="col-md-12">
-          <div class="card p-4 shadow-sm border-0 rounded-3">
-            <h5 class="fw-bold mb-3 text-secondary">Main Warehouse Stock Catalog</h5>
-            <div class="table-responsive">
-              <table class="table table-hover align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th>#</th>
-                    <th>Item Code</th>
-                    <th>Description (اسم المنتج / الوصف)</th>
-                    <th>Opening Qty</th>
-                    <th>Outstanding Qty</th>
-                    <th>Total Amount (SAR)</th>
-                  </tr>
-                </thead>
-                <tbody id="inventoryTableBody">
-                  <!-- Dynamically populated -->
-                </tbody>
-              </table>
-            </div>
+          <div class="chart-container" style="position: relative; height: 420px;">
+            <canvas id="contributionChart"></canvas>
           </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ADD ITEM MODAL -->
+  <div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">Add New Inventory Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="newItemForm" onsubmit="addNewItem(event)">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item Code (رمز الصنف)</label>
+              <input type="text" id="newCode" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Item Description (اسم المنتج / الوصف)</label>
+              <input type="text" id="newDesc" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Opening Balance (الرصيد الافتتاحي)</label>
+              <input type="number" id="newOpenQty" class="form-control" value="0" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Opening Amount (المبلغ الافتتاحي)</label>
+              <input type="number" step="0.01" id="newOpenAmt" class="form-control" value="0.00" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100 fw-bold">Save and Link All Panels</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Supabase Credentials
     const SUPABASE_URL = "https://zfhasyrauufcuosghdbi.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmaGFzeXJhdXVmY3Vvc2doZGJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyODcxMzgsImV4cCI6MjEwODg2MzEzOH0.Jl5y6QEtE0hUOMisnRmQMqm0B9ntjp0W5l0EC5QSDY0";
 
-    let supabase;
-    if (typeof window.supabase !== 'undefined') {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    }
+    let supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-    const SAMPLE_ITEMS = [
-      { sn: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, outstQty: 42000, amt: 1207.50 },
-      { sn: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, outstQty: 40000, amt: 0.00 },
-      { sn: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, outstQty: 39500, amt: 3160.00 },
-      { sn: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, outstQty: 32000, amt: 0.00 },
-      { sn: 5, code: "401", desc: "زيت منظف", openQty: 20904, outstQty: 20904, amt: 73301.99 },
-      { sn: 6, code: "60102", desc: "(50w20) زيت بنزين بترومين", openQty: 11160, outstQty: 11160, amt: 101566.31 },
-      { sn: 7, code: "D-00", desc: "اشرطة امان معدنية مرقمة - أصفر", openQty: 10500, outstQty: 10500, amt: 4693.34 },
-      { sn: 8, code: "7 1989", desc: "Noorkhoy NFCs with Serial Number", openQty: 9500, outstQty: 9500, amt: 22164.07 }
+    let inventoryCatalog = [
+      { sn: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, outQty: 0, receivedQty: 42000 },
+      { sn: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00, outQty: 0, receivedQty: 40000 },
+      { sn: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00, outQty: 0, receivedQty: 39500 },
+      { sn: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00, outQty: 0, receivedQty: 32000 },
+      { sn: 5, code: "401", desc: "زيت منظف", openQty: 20904, openAmt: 73301.99, outQty: 0, receivedQty: 20904 },
+      { sn: 6, code: "748", desc: "استيكرات 91 نور خوي", openQty: 20000, openAmt: 0.00, outQty: 0, receivedQty: 20000 },
+      { sn: 7, code: "60102", desc: "(50w20) زيت بنزين بترومين", openQty: 11160, openAmt: 101566.31, outQty: 0, receivedQty: 11160 },
+      { sn: 8, code: "D-00", desc: "اشرطة امان معدنية مرقمة - أصفر", openQty: 10500, openAmt: 4693.34, outQty: 0, receivedQty: 10500 },
+      { sn: 9, code: "7 1989", desc: "Noorkhoy NFCs with Serial Number", openQty: 9500, openAmt: 22164.07, outQty: 0, receivedQty: 9500 }
     ];
 
-    function handleLogin(event) {
-      event.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const alertMsg = document.getElementById('alertMsg');
+    let transactions = [
+      { sn: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH" }
+    ];
 
-      if (email.trim().toLowerCase() === "clerk@noor.com" && password === "Noor@123") {
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const pwd = document.getElementById('password').value;
+      if (email.trim().toLowerCase() === "clerk@noor.com" && pwd === "Noor@123") {
         document.getElementById('loginSection').classList.add('d-none');
         document.getElementById('dashboardSection').classList.remove('d-none');
-        document.getElementById('userBadge').innerText = "clerk@noor.com";
-        renderDashboard();
+        renderAll();
       } else {
-        alertMsg.innerText = "Invalid Email ID or Password. Use clerk@noor.com / Noor@123";
+        const alertMsg = document.getElementById('alertMsg');
+        alertMsg.innerText = "Invalid credentials. Use clerk@noor.com / Noor@123";
         alertMsg.classList.remove('d-none');
       }
     }
 
-    function renderDashboard() {
-      renderChart();
-      renderTable();
+    function switchTab() {
+      const tab = document.getElementById('activeTab').value;
+      document.getElementById('tabOpeningBalance').classList.add('d-none');
+      document.getElementById('tabItemIndex').classList.add('d-none');
+      document.getElementById('tabTransactions').classList.add('d-none');
+      document.getElementById('tabAnalytics').classList.add('d-none');
+
+      if (tab === 'openingBalance') document.getElementById('tabOpeningBalance').classList.remove('d-none');
+      if (tab === 'itemIndex') document.getElementById('tabItemIndex').classList.remove('d-none');
+      if (tab === 'transactions') document.getElementById('tabTransactions').classList.remove('d-none');
+      if (tab === 'analytics') {
+        document.getElementById('tabAnalytics').classList.remove('d-none');
+        renderContributionChart();
+      }
     }
 
-    function renderChart() {
-      const ctx = document.getElementById('inventoryChart').getContext('2d');
-      const sortedItems = [...SAMPLE_ITEMS].sort((a, b) => b.amt - a.amt).slice(0, 5);
-      
+    function jumpToTransactions(code) {
+      document.getElementById('activeTab').value = 'transactions';
+      switchTab();
+      document.getElementById('txItemCode').value = code;
+    }
+
+    function renderAll() {
+      renderOpeningBalanceTable();
+      renderItemIndexTable();
+      renderTransactionTable();
+    }
+
+    function renderOpeningBalanceTable() {
+      const tbody = document.getElementById('openingBalanceTableBody');
+      tbody.innerHTML = '';
+      inventoryCatalog.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-center fw-bold">${index + 1}</td>
+          <td class="text-center"><span class="clickable-item" onclick="jumpToTransactions('${item.code}')">${item.code}</span></td>
+          <td class="fw-semibold">${item.desc}</td>
+          <td class="text-end">${item.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end">${item.openAmt > 0 ? item.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderItemIndexTable() {
+      const tbody = document.getElementById('itemIndexTableBody');
+      tbody.innerHTML = '';
+      inventoryCatalog.forEach((item, index) => {
+        const out = item.outQty || 0;
+        const outstandingQty = item.openQty - out;
+        const outstandingAmt = item.openAmt > 0 ? (item.openAmt / item.openQty) * outstandingQty : 0;
+        const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-center fw-bold">${index + 1}</td>
+          <td class="text-center"><span class="clickable-item" onclick="jumpToTransactions('${item.code}')">${item.code}</span></td>
+          <td class="fw-semibold">${item.desc}</td>
+          <td class="text-end">${item.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end">${out.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end fw-bold text-primary">${outstandingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end fw-bold text-success">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+          <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="jumpToTransactions('${item.code}')">+ Add Entry</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderTransactionTable() {
+      const tbody = document.getElementById('transactionTableBody');
+      tbody.innerHTML = '';
+      transactions.forEach((tx, index) => {
+        const out = tx.outQty || 0;
+        const outstandingQty = tx.openQty - out;
+        const outstandingAmt = tx.openAmt > 0 ? (tx.openAmt / tx.openQty) * outstandingQty : 0;
+        const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-center fw-bold">${index + 1}</td>
+          <td class="text-center"><span class="badge bg-light text-dark border">${tx.code}</span></td>
+          <td class="fw-semibold">${tx.desc}</td>
+          <td class="text-end">${tx.openQty.toLocaleString()}</td>
+          <td class="text-end">SAR ${tx.openAmt.toLocaleString()}</td>
+          <td>${tx.date}</td>
+          <td>${tx.voucher}</td>
+          <td class="text-success text-end fw-bold">${tx.inQty || 0}</td>
+          <td class="text-danger text-end fw-bold">${tx.outQty || 0}</td>
+          <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
+          <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+          <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+          <td>${tx.costCentre}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function addNewItem(e) {
+      e.preventDefault();
+      const code = document.getElementById('newCode').value;
+      const desc = document.getElementById('newDesc').value;
+      const openQty = parseFloat(document.getElementById('newOpenQty').value);
+      const openAmt = parseFloat(document.getElementById('newOpenAmt').value);
+
+      inventoryCatalog.push({
+        sn: inventoryCatalog.length + 1,
+        code: code,
+        desc: desc,
+        openQty: openQty,
+        openAmt: openAmt,
+        outQty: 0,
+        receivedQty: openQty
+      });
+
+      renderAll();
+      var modalEl = document.getElementById('addItemModal');
+      var modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+      document.getElementById('newItemForm').reset();
+      alert('New item successfully added across all sheets and panels!');
+    }
+
+    function submitTransaction(e) {
+      e.preventDefault();
+      const code = document.getElementById('txItemCode').value;
+      const type = document.getElementById('txType').value;
+      const qty = parseFloat(document.getElementById('txQty').value);
+      const price = parseFloat(document.getElementById('txPrice').value);
+      const costCentre = document.getElementById('txCostCentre').value;
+
+      const found = inventoryCatalog.find(i => i.code === code);
+      const desc = found ? found.desc : "General Stock Item";
+      const openQty = found ? found.openQty : 1000;
+      const openAmt = found ? found.openAmt : 500;
+
+      transactions.push({
+        sn: transactions.length + 1,
+        code: code,
+        desc: desc,
+        openQty: openQty,
+        openAmt: openAmt,
+        date: new Date().toISOString().split('T')[0],
+        voucher: 'V-' + Math.floor(1000 + Math.random() * 9000),
+        inQty: type === 'INBOUND' ? qty : 0,
+        outQty: type === 'OUTBOUND' ? qty : 0,
+        costCentre: costCentre
+      });
+
+      if (found) {
+        if (type === 'OUTBOUND') found.outQty = (found.outQty || 0) + qty;
+        if (type === 'INBOUND') found.receivedQty = (found.receivedQty || found.openQty) + qty;
+      }
+
+      renderAll();
+      document.getElementById('txForm').reset();
+      alert('Transaction movement successfully recorded in Item Card!');
+    }
+
+    function renderContributionChart() {
+      const ctx = document.getElementById('contributionChart').getContext('2d');
+      const rankedItems = [...inventoryCatalog]
+        .map(item => ({
+          desc: item.desc,
+          ratio: item.receivedQty > 0 ? ((item.outQty || 0) / item.receivedQty * 100).toFixed(1) : 0
+        }))
+        .sort((a, b) => b.ratio - a.ratio)
+        .slice(0, 20);
+
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: sortedItems.map(item => item.desc),
+          labels: rankedItems.map(i => i.desc),
           datasets: [{
-            label: 'Valuation Amount (SAR)',
-            data: sortedItems.map(item => item.amt),
-            backgroundColor: '#0d6efd',
+            label: 'Outgoing vs Received Contribution Ratio (%)',
+            data: rankedItems.map(i => i.ratio),
+            backgroundColor: '#1a365d',
             borderRadius: 6
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Contribution Ratio (%)' } }
+          }
         }
       });
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById('inventoryTableBody');
-      tbody.innerHTML = '';
-      
-      SAMPLE_ITEMS.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.sn}</td>
-          <td><span class="badge bg-light text-dark border">${item.code}</span></td>
-          <td class="fw-semibold">${item.desc}</td>
-          <td>${item.openQty.toLocaleString()}</td>
-          <td>${item.outstQty.toLocaleString()}</td>
-          <td class="fw-bold text-success">SAR ${item.amt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function toggleView() {
-      const role = document.getElementById('roleSelector').value;
-      if (role === 'delhi') {
-        document.getElementById('delhiSection').classList.remove('d-none');
-      } else {
-        document.getElementById('delhiSection').classList.add('d-none');
-      }
-    }
-
-    async function submitTransaction(e) {
-      e.preventDefault();
-      const item_code = document.getElementById('itemCode').value;
-      const type = document.getElementById('transType').value;
-      const quantity = parseFloat(document.getElementById('transQty').value);
-      const unit_price = parseFloat(document.getElementById('unitPrice').value);
-
-      if (!supabase) {
-        alert('Supabase client not loaded. Check internet connection.');
-        return;
-      }
-
-      const { error } = await supabase.from('transactions').insert([
-        { item_code, type, quantity, unit_price, location: 'Delhi Warehouse', entered_by: 'Delhi Clerk' }
-      ]);
-
-      if (!error) {
-        alert('Transaction Broadcasted Successfully!');
-        document.getElementById('entryForm').reset();
-      } else {
-        alert('Database Error: ' + error.message);
-      }
     }
 
     function logout() {
