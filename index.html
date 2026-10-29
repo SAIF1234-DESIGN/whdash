@@ -52,6 +52,31 @@
 </head>
 <body onload="initDashboard()">
 
+  <!-- LOGIN MODAL -->
+  <div class="modal fade" id="loginModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold">🔐 System Authentication / تسجيل الدخول</h5>
+        </div>
+        <div class="modal-body p-4">
+          <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Email / البريد الإلكتروني</label>
+              <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Password / كلمة المرور</label>
+              <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" required>
+            </div>
+            <div id="loginError" class="text-danger small mb-3 fw-bold" style="display:none;"></div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Login / دخول</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MAIN DASHBOARD SECTION -->
   <div id="dashboardSection" class="container-fluid py-3 px-4">
     
@@ -76,7 +101,8 @@
             <option value="ar">العربية</option>
           </select>
         </div>
-        <span class="badge bg-secondary px-3 py-2" data-i18n="staffClerk">Staff Clerk</span>
+        <span class="badge bg-secondary px-3 py-2" id="userRoleBadge">Staff Clerk</span>
+        <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="logoutSession()">Logout</button>
       </div>
     </div>
 
@@ -85,17 +111,13 @@
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
           <label class="fw-bold text-primary mb-0" data-i18n="masterMonthLabel">📅 Master Active Month Selector:</label>
-          <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 180px;">
-            <option value="2026-09">September 2026</option>
-            <option value="2026-10" selected>October 2026 (Current)</option>
-            <option value="2026-11">November 2026 (Future)</option>
-            <option value="2026-12">December 2026 (Future)</option>
-            <option value="ALL">All Months / YTD</option>
+          <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 200px;">
+            <!-- Dynamically populated past, current, and future months -->
           </select>
           <small class="text-muted" data-i18n="masterMonthHint">(Strictly calculated by movement dates)</small>
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
-          <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
+          <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer" id="uploadBtnContainer">
             📂 <span data-i18n="uploadOpenBtn">Upload Opening Balances</span> <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
           </label>
           <div class="dropdown">
@@ -143,20 +165,20 @@
                 <option value="25">25</option>
                 <option value="50">50</option>
               </select>
-              <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
+              <button type="button" class="btn btn-sm btn-success fw-semibold" id="addItemTriggerBtn" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
             </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th style="width: 50px;" data-i18n="thSn">م SN<br><small>رقم</small></th>
+                  <th style="width: 70px;" data-i18n="thSn">SN<br><small>الرقم</small></th>
                   <th style="width: 120px;" data-i18n="thItemCode">ItemCode<br><small>رمز الصنف</small></th>
                   <th data-i18n="thItemDescEn">Item Name (English)<br><small>اسم الصنف (إنجليزي)</small></th>
                   <th data-i18n="thItemDescAr">Item Name (Arabic)<br><small>اسم الصنف (عربي)</small></th>
                   <th style="width: 160px;" data-i18n="thOpeningBal">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
                   <th style="width: 160px;" data-i18n="thOpeningAmt">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
-                  <th style="width: 90px;" data-i18n="thActions">Actions<br><small>الإجراءات</small></th>
+                  <th style="width: 90px;" data-i18n="thActions" id="openingActionHeader">Actions<br><small>الإجراءات</small></th>
                 </tr>
               </thead>
               <tbody id="openingBalanceTableBody">
@@ -181,7 +203,7 @@
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th data-i18n="thSn">م SN</th>
+                  <th data-i18n="thSn">SN<br>الرقم</th>
                   <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
                   <th data-i18n="thItemDescEn">Item Name (English)</th>
                   <th data-i18n="thItemDescAr">Item Name (Arabic)</th>
@@ -254,7 +276,7 @@
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold" data-i18n="labelDate">Date (YYYY-MM-DD)</label>
-              <input type="date" id="txDateInput" class="form-control form-control-sm" value="2026-10-29" required>
+              <input type="date" id="txDateInput" class="form-control form-control-sm" required>
             </div>
             <div class="col-md-3">
               <label class="form-label small fw-semibold" data-i18n="labelRemarks">Remarks (ملاحظات)</label>
@@ -269,7 +291,7 @@
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th data-i18n="thSn">SN</th>
+                  <th data-i18n="thSn">SN<br>الرقم</th>
                   <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
                   <th data-i18n="thItemDescEn">Item Name (English)</th>
                   <th data-i18n="thItemDescAr">Item Name (Arabic)</th>
@@ -373,7 +395,7 @@
         openingSheetTitle: "Opening Balance Sheet",
         searchPlaceholder: "🔍 Search inventory...",
         addItemBtn: "+ Add New Item",
-        thSn: "م SN",
+        thSn: "SN\nالرقم",
         thItemCode: "Item Code\nرمز الصنف",
         thItemDescEn: "Item Name (English)\nاسم الصنف (إنجليزي)",
         thItemDescAr: "Item Name (Arabic)\nاسم الصنف (عربي)",
@@ -442,7 +464,7 @@
         openingSheetTitle: "جدول الرصيد الافتتاحي",
         searchPlaceholder: "🔍 بحث في المخزون...",
         addItemBtn: "+ إضافة صنف جديد",
-        thSn: "م SN",
+        thSn: "SN\nالرقم",
         thItemCode: "رمز الصنف\nItem Code",
         thItemDescEn: "اسم الصنف (إنجليزي)\nItem Name (English)",
         thItemDescAr: "اسم الصنف (عربي)\nItem Name (Arabic)",
@@ -495,7 +517,135 @@
     };
 
     let currentLang = 'en';
-    let activeTabName = 'opening'; // tracks active panel for banner totals
+    let activeTabName = 'opening';
+    let currentUser = null; // { email, role: 'admin' | 'clerk' }
+
+    // Users Database
+    const USERS = {
+      "kassarsaif@gmail.com": { pass: "72724@Whdash", role: "admin", name: "System Admin" },
+      "clerk@noor.com": { pass: "Noor@123", role: "clerk", name: "Staff Clerk" }
+    };
+
+    function initDashboard() {
+      checkAuth();
+      setupDateRestrictions();
+      populateDynamicMonths();
+      renderAll();
+    }
+
+    function checkAuth() {
+      const savedUser = sessionStorage.getItem('currentUser');
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        applyRolePermissions();
+      } else {
+        var myModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        myModal.show();
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass = document.getElementById('loginPassword').value.trim();
+      const errEl = document.getElementById('loginError');
+
+      if (USERS[email] && USERS[email].pass === pass) {
+        currentUser = { email, role: USERS[email].role, name: USERS[email].name };
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        errEl.style.display = 'none';
+        
+        var modalEl = document.getElementById('loginModal');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        applyRolePermissions();
+        renderAll();
+      } else {
+        errEl.innerText = "Invalid Email or Password / البريد الإلكتروني أو كلمة المرور غير صحيحة";
+        errEl.style.display = 'block';
+      }
+    }
+
+    function logoutSession() {
+      sessionStorage.removeItem('currentUser');
+      currentUser = null;
+      window.location.reload();
+    }
+
+    function applyRolePermissions() {
+      const roleBadge = document.getElementById('userRoleBadge');
+      const addItemBtn = document.getElementById('addItemTriggerBtn');
+      const uploadContainer = document.getElementById('uploadBtnContainer');
+
+      if (currentUser.role === 'admin') {
+        roleBadge.innerText = "Administrator (Admin)";
+        roleBadge.className = "badge bg-danger px-3 py-2";
+        if (addItemBtn) addItemBtn.style.display = 'inline-block';
+        if (uploadContainer) uploadContainer.style.display = 'inline-block';
+      } else {
+        roleBadge.innerText = "Staff Clerk (Data Entry)";
+        roleBadge.className = "badge bg-success px-3 py-2";
+        if (addItemBtn) addItemBtn.style.display = 'none'; // Clerk cannot add items, only post transactions
+        if (uploadContainer) uploadContainer.style.display = 'none';
+      }
+    }
+
+    // Dynamic Current Month & Past/Future Month Generator
+    function populateDynamicMonths() {
+      const select = document.getElementById('masterMonthSelect');
+      select.innerHTML = '';
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonthNum = now.getMonth() + 1; // 1-12
+
+      // Generate months from January of current year up to December, plus next year or past year dynamically
+      let monthsList = [];
+      for (let y = currentYear - 1; y <= currentYear + 1; y++) {
+        for (let m = 1; m <= 12; m++) {
+          let mStr = m < 10 ? '0' + m : '' + m;
+          let val = `${y}-${mStr}`;
+          
+          let label = new Date(y, m - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
+          let status = "";
+          
+          if (y < currentYear || (y === currentYear && m < currentMonthNum)) {
+            status = currentLang === 'ar' ? ' (سابق - Past)' : ' (Past)';
+          } else if (y === currentYear && m === currentMonthNum) {
+            status = currentLang === 'ar' ? ' (الحالي - Current)' : ' (Current)';
+          } else {
+            status = currentLang === 'ar' ? ' (مستقبلي - Future)' : ' (Future)';
+          }
+
+          monthsList.push({ val, label: label + status, isCurrent: (y === currentYear && m === currentMonthNum) });
+        }
+      }
+
+      // Add "All Months / YTD"
+      monthsList.push({ val: 'ALL', label: currentLang === 'ar' ? 'جميع الشهور / YTD' : 'All Months / YTD', isCurrent: false });
+
+      const currentActiveVal = `${currentYear}-${currentMonthNum < 10 ? '0' + currentMonthNum : currentMonthNum}`;
+
+      monthsList.forEach(item => {
+        let opt = document.createElement('option');
+        opt.value = item.val;
+        opt.text = item.label;
+        if (item.val === currentActiveVal) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    function setupDateRestrictions() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('txDateInput');
+      if (dateInput) {
+        dateInput.max = todayStr; // Block future dates
+        dateInput.value = todayStr;
+      }
+    }
 
     function changeLanguage(lang) {
       currentLang = lang;
@@ -522,10 +672,10 @@
         }
       });
 
+      populateDynamicMonths();
       renderAll();
     }
 
-    // Inventory Catalog with separate descEn and descAr
     let inventoryCatalog = [
       { id: 1, code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
       { id: 2, code: "749", descEn: "Stickers 95 Noor Khawi", descAr: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
@@ -539,14 +689,9 @@
     ];
 
     let explicitOpenBalances = {}; 
-
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
-
-    function initDashboard() {
-      renderAll();
-    }
 
     function onMasterMonthChanged() {
       renderAll();
@@ -558,8 +703,11 @@
     }
 
     function openAddModal() {
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert("Access Denied: Only Admin (kassarsaif@gmail.com) can add new inventory items.");
+        return;
+      }
       const masterMonth = document.getElementById('masterMonthSelect').value;
-      document.getElementById('modalMonthTitle').innerText = masterMonth;
       document.getElementById('newItemForm').reset();
       document.getElementById('newOpenQty').value = 0;
       document.getElementById('newOpenAmt').value = 0.00;
@@ -568,6 +716,10 @@
     }
 
     function deleteItem(code) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert("Access Denied: Only Admin can delete items.");
+        return;
+      }
       if (confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الصنف ${code}؟` : `Are you sure you want to delete item code ${code}?`)) {
         inventoryCatalog = inventoryCatalog.filter(i => i.code !== code);
         transactions = transactions.filter(t => t.code !== code);
@@ -673,6 +825,7 @@
 
     function populateDatalist() {
       const datalist = document.getElementById('inventoryListOptions');
+      if (!datalist) return;
       datalist.innerHTML = '';
       inventoryCatalog.forEach(item => {
         const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
@@ -685,8 +838,10 @@
       if (explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0) return true;
       const monthTxs = transactions.filter(tx => tx.date.startsWith(targetMonth));
       if (monthTxs.length > 0) return true;
-      if (targetMonth === '2026-10' && inventoryCatalog.length > 0) return true;
-      if (targetMonth === '2026-09' && inventoryCatalog.length > 0) return true;
+      
+      const now = new Date();
+      const currentActive = `${now.getFullYear()}-${(now.getMonth()+1)<10?'0'+(now.getMonth()+1):(now.getMonth()+1)}`;
+      if (targetMonth === currentActive && inventoryCatalog.length > 0) return true;
       return false;
     }
 
@@ -727,7 +882,9 @@
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      if (targetMonth === '2026-09' || targetMonth === '2026-10') {
+      const now = new Date();
+      const currentActive = `${now.getFullYear()}-${(now.getMonth()+1)<10?'0'+(now.getMonth()+1):(now.getMonth()+1)}`;
+      if (targetMonth === currentActive) {
         const item = inventoryCatalog.find(i => i.code === itemCode);
         return {
           openQty: item ? parseFloat(item.openQty) || 0 : 0,
@@ -735,14 +892,12 @@
         };
       }
       
-      let prevMonthStr = '2026-09';
-      if (targetMonth === '2026-11') prevMonthStr = '2026-10';
-      if (targetMonth === '2026-12') prevMonthStr = '2026-11';
-      
-      const [year, month] = prevMonthStr.split('-');
-      const lastDayDate = new Date(year, month, 0).toISOString().split('T')[0];
+      // Calculate precise ending balance of previous month
+      const [y, m] = targetMonth.split('-').map(Number);
+      let prevDate = new Date(y, m - 1, 0); // last day of previous month
+      let prevMonthStr = prevDate.toISOString().split('T')[0];
 
-      const prevStats = calculateBalanceUpToDate(itemCode, lastDayDate);
+      const prevStats = calculateBalanceUpToDate(itemCode, prevMonthStr);
       return {
         openQty: prevStats.qty,
         openAmt: prevStats.amt
@@ -795,8 +950,9 @@
 
     function updateBannerTotals() {
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
-      const monthText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : 'October 2026';
+      if (!masterSelect) return;
+      const selectedMonth = masterSelect.value;
+      const monthText = masterSelect.options[masterSelect.selectedIndex].text;
       
       document.getElementById('bannerMonthLabel').innerText = monthText;
 
@@ -810,7 +966,6 @@
       let totalAmt = 0;
 
       if (activeTabName === 'opening') {
-        // Banner shows opening balance totals for Opening Balance panel
         document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerOpenQtyText;
         document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerOpenAmtText;
 
@@ -822,7 +977,6 @@
           }
         });
       } else {
-        // Banner shows outstanding totals for Item Index & Transactions panels
         document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerQtyText;
         document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerAmtText;
 
@@ -841,11 +995,12 @@
 
     function renderOpeningBalanceTable() {
       const tbody = document.getElementById('openingBalanceTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
       
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
-      document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : 'October 2026';
+      const selectedMonth = masterSelect ? masterSelect.value : '';
+      document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : '';
 
       if (!hasMonthData(selectedMonth)) {
         return;
@@ -864,6 +1019,8 @@
         const rollover = getRolloverStats(item.code, selectedMonth);
         if (rollover.openQty === null) return;
 
+        const canDelete = currentUser && currentUser.role === 'admin';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
@@ -873,7 +1030,7 @@
           <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>
+            ${canDelete ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>` : `<small class="text-muted">View Only</small>`}
           </td>
         `;
         tbody.appendChild(tr);
@@ -883,9 +1040,10 @@
 
     function renderItemIndexTable() {
       const tbody = document.getElementById('itemIndexTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+      const selectedMonth = masterSelect ? masterSelect.value : '';
 
       if (!hasMonthData(selectedMonth)) {
         return;
@@ -925,10 +1083,11 @@
 
     function renderTransactionTable() {
       const tbody = document.getElementById('transactionTableBody');
+      if (!tbody) return;
       tbody.innerHTML = '';
       
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+      const selectedMonth = masterSelect ? masterSelect.value : '';
 
       if (!hasMonthData(selectedMonth)) {
         return;
@@ -941,7 +1100,7 @@
       }
 
       let globalSn = 1;
-      const today = new Date('2026-10-29');
+      const today = new Date();
 
       sortedCatalog.forEach(item => {
         const rollover = getRolloverStats(item.code, selectedMonth);
@@ -995,7 +1154,7 @@
 
             const txDate = new Date(tx.date);
             const diffDays = (today - txDate) / (1000 * 60 * 60 * 24);
-            const canEdit = diffDays <= 3;
+            const canEdit = currentUser && (currentUser.role === 'admin' || diffDays <= 3);
             const trackingDetail = [tx.costCentre, tx.station].filter(Boolean).join(' / ') || tx.remarks || '-';
 
             tbody.innerHTML += `
@@ -1048,11 +1207,15 @@
 
     function addNewItem(e) {
       e.preventDefault();
-      const code = document.getElementById('newCode').value;
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert("Access Denied: Only Admin (kassarsaif@gmail.com) can add new inventory items.");
+        return;
+      }
+
+      const code = document.getElementById('newCode').value.trim();
       let descEn = document.getElementById('newDescEn').value.trim();
       let descAr = document.getElementById('newDescAr').value.trim();
       
-      // Dual Name Logic: If one is provided and other is empty, copy it
       if (descEn && !descAr) descAr = descEn;
       if (descAr && !descEn) descEn = descAr;
 
@@ -1077,12 +1240,16 @@
 
       var modalEl = document.getElementById('addItemModal');
       var modal = bootstrap.Modal.getInstance(modalEl);
-      modal.hide();
+      if (modal) modal.hide();
       document.getElementById('newItemForm').reset();
       alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
     function promptUploadMonth(e) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert("Access Denied: Only Admin can upload opening balances.");
+        return;
+      }
       const file = e.target.files[0];
       if (!file) return;
 
@@ -1098,14 +1265,14 @@
         lines.forEach((line, idx) => {
           if (idx === 0) return;
           const parts = line.split(',');
-          if (parts.length >= 5) {
+          if (parts.length >= 4) {
             const code = parts[0].trim();
             let descEn = parts[1].trim();
-            let descAr = parts[2].trim();
+            let descAr = parts.length >= 5 ? parts[2].trim() : descEn;
             if (descEn && !descAr) descAr = descEn;
             if (descAr && !descEn) descEn = descAr;
-            const openQty = parseFloat(parts[3]) || 0;
-            const openAmt = parseFloat(parts[4]) || 0;
+            const openQty = parseFloat(parts[parts.length >= 5 ? 3 : 2]) || 0;
+            const openAmt = parseFloat(parts[parts.length >= 5 ? 4 : 3]) || 0;
             
             if (code) {
               if (!inventoryCatalog.some(i => i.code === code)) {
@@ -1126,15 +1293,22 @@
     function submitTransaction(e) {
       e.preventDefault();
       const editId = document.getElementById('editTxId').value;
-      const code = document.getElementById('txItemCode').value;
-      const voucher = document.getElementById('txVoucher').value;
+      const code = document.getElementById('txItemCode').value.trim();
+      const voucher = document.getElementById('txVoucher').value.trim();
       const type = document.getElementById('txType').value;
       const qty = parseFloat(document.getElementById('txQty').value) || 0;
       const invoiceAmt = parseFloat(document.getElementById('txInvoiceAmt').value) || 0;
-      const costCentre = document.getElementById('txCostCentre').value;
-      const station = document.getElementById('txStation').value;
-      const remarks = document.getElementById('txRemarks').value;
+      const costCentre = document.getElementById('txCostCentre').value.trim();
+      const station = document.getElementById('txStation').value.trim();
+      const remarks = document.getElementById('txRemarks').value.trim();
       const dateStr = document.getElementById('txDateInput').value;
+
+      // Restrict future date entries
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dateStr > todayStr) {
+        alert(currentLang === 'ar' ? 'خطأ: لا يمكن إدخال حركات بتواريخ مستقبلية!' : 'Error: Future date entries are not allowed!');
+        return;
+      }
 
       if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
         alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' : 'Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
@@ -1189,14 +1363,14 @@
       renderAll();
       document.getElementById('txForm').reset();
       document.getElementById('txItemCode').value = code;
+      setupDateRestrictions();
       toggleMovementFields();
       alert(currentLang === 'ar' ? 'تم تسجيل وتحديث الحركة بنجاح!' : 'Transaction successfully recorded and updated!');
     }
 
-    // 1. Stock Movement Report (Summary Report)
     function downloadStockMovementReport() {
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+      const selectedMonth = masterSelect ? masterSelect.value : '';
       
       let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Opening Balance,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price\n";
       
@@ -1216,10 +1390,9 @@
       document.body.removeChild(link);
     }
 
-    // 2. Stock Ledger Report (Item by item transactional movement report by date)
     function downloadStockLedgerReport() {
       const masterSelect = document.getElementById('masterMonthSelect');
-      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+      const selectedMonth = masterSelect ? masterSelect.value : '';
 
       let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Date,Voucher No,Movement Type,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price,Location/Station,Remarks\n";
       
@@ -1237,7 +1410,6 @@
         const openQ = rollover.openQty;
         const openA = rollover.openAmt;
 
-        // Opening row
         csvContent += `${globalSn++},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${selectedMonth === 'ALL' ? '2026-10-01' : selectedMonth + '-01'},OPENING,OPENING,0,0,${openQ},${openA.toFixed(2)},${openQ > 0 ? (openA/openQ).toFixed(2) : 0},"Main WH","Opening Balance"\n`;
 
         let runningQty = openQ;
