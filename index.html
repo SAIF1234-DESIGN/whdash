@@ -11,13 +11,6 @@
       background-color: #f4f6f9;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .login-card {
-      max-width: 420px;
-      margin: 80px auto;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-    }
     .top-banner {
       background: #ffeb3b;
       color: #000;
@@ -40,7 +33,7 @@
     .table thead th {
       background-color: #1a365d !important;
       color: #fff !important;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       border: 1px solid #2a4365;
       text-align: center;
       vertical-align: middle;
@@ -57,34 +50,14 @@
     }
   </style>
 </head>
-<body>
-
-  <!-- LOGIN SECTION -->
-  <div id="loginSection" class="card login-card p-4">
-    <div class="text-center mb-3">
-      <h4 class="text-primary fw-bold mb-1">مؤسسة النور المتحدة للوقود</h4>
-      <p class="text-muted small mb-0">Al Noor United Fuel Est - Portal</p>
-    </div>
-    <div id="alertMsg" class="alert alert-danger d-none" role="alert"></div>
-    <form id="loginForm" onsubmit="handleLogin(event)">
-      <div class="mb-3">
-        <label for="email" class="form-label fw-semibold">Email ID</label>
-        <input type="email" id="email" class="form-control" value="clerk@noor.com" required>
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label fw-semibold">Password</label>
-        <input type="password" id="password" class="form-control" value="Noor@123" required>
-      </div>
-      <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Login to Dashboard</button>
-    </form>
-  </div>
+<body onload="initDashboard()">
 
   <!-- MAIN DASHBOARD SECTION -->
-  <div id="dashboardSection" class="container-fluid py-3 px-4 d-none">
+  <div id="dashboardSection" class="container-fluid py-3 px-4">
     
     <!-- Top Summary Banner -->
     <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
-      Total opening quantity as of 01/10/2026 was <span id="bannerQty">1,74,404.00</span> &nbsp;|&nbsp; Total opening amount was SAR <span id="bannerAmt">77,669.49</span>
+      Total Outstanding Quantity: <span id="bannerQty">0.00</span> &nbsp;|&nbsp; Total Outstanding Amount: SAR <span id="bannerAmt">0.00</span>
     </div>
 
     <!-- Company Header Navbar -->
@@ -92,24 +65,23 @@
       <div>
         <h4 class="fw-bold mb-0 text-primary">مؤسسة النور المتحدة للوقود</h4>
         <h5 class="fw-bold mb-0 text-dark">Al Noor United Fuel Est</h5>
-        <small class="text-muted"><span class="badge bg-success">● Local Session Active</span> Main Warehouse / Southern Warehouse Stock Sheet</small>
+        <small class="text-muted"><span class="badge bg-success">● Direct Session Active</span> Main Warehouse / Southern Warehouse Stock Sheet</small>
       </div>
       <div class="d-flex align-items-center gap-3">
-        <span class="badge bg-secondary px-3 py-2" id="userBadge">Clerk</span>
-        <button onclick="logout()" class="btn btn-outline-danger btn-sm fw-semibold">Logout</button>
+        <span class="badge bg-secondary px-3 py-2" id="userBadge">Staff Clerk</span>
       </div>
     </div>
 
     <!-- SEPARATED NAVIGATION TABS -->
     <ul class="nav nav-pills mb-3" id="dashboardTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab">1. Opening Balance (الرصيد الافتتاحي)</button>
+        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab" onclick="switchTab('opening')">1. Opening Balance (الرصيد الافتتاحي)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab">2. Item Index (سجل الأصناف)</button>
+        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab" onclick="switchTab('index')">2. Item Index (سجل الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab">3. Transactions / Item Card (حركة الأصناف)</button>
+        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab" onclick="switchTab('transactions')">3. Transactions / Item Card (حركة الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tabAnalytics" type="button" role="tab" onclick="renderContributionChart()">4. Top 20 Outgoing Ratio (تحليل الصادر)</button>
@@ -121,9 +93,21 @@
       <!-- TAB 1: OPENING BALANCE SHEET -->
       <div class="tab-pane fade show active" id="tabOpeningBalance" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h5 class="fw-bold text-primary mb-0">📦 Opening Balance Sheet (01/10/2026)</h5>
-            <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()">+ Add New Inventory Item</button>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="text" id="openingSearch" class="form-control form-control-sm" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()">
+              <select id="openingPageSize" class="form-select form-select-sm" onchange="renderOpeningBalanceTable()" style="width: 80px;">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </select>
+              <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
+                📂 Upload File <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="handleFileUpload(event)" hidden>
+              </label>
+              <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()">+ Add New Item</button>
+            </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle">
@@ -147,7 +131,18 @@
       <!-- TAB 2: ITEM INDEX -->
       <div class="tab-pane fade" id="tabItemIndex" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
-          <h5 class="fw-bold text-primary mb-3">📊 Master Item Index & Outstanding Stock Sheet</h5>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-primary mb-3">📊 Master Item Index & Outstanding Stock Sheet</h5>
+            <div class="d-flex align-items-center gap-2">
+              <label class="form-label small fw-semibold mb-0">Select Month:</label>
+              <select id="indexMonthSelect" class="form-select form-select-sm" onchange="renderItemIndexTable()" style="width: 140px;">
+                <option value="2026-10" selected>October 2026</option>
+                <option value="2026-11">November 2026</option>
+                <option value="2026-12">December 2026</option>
+                <option value="ALL">All Months / YTD</option>
+              </select>
+            </div>
+          </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle">
               <thead>
@@ -156,8 +151,10 @@
                   <th>Item Code<br>رمز الصنف</th>
                   <th>Item Name / Description<br>اسم المنتج / الوصف</th>
                   <th>Opening Balance<br>الرصيد الافتتاحي</th>
-                  <th>Outgoing Quantity<br>الكمية الصادرة</th>
+                  <th>Incoming Qty<br>الكمية الواردة</th>
+                  <th>Outgoing Qty<br>الكمية الصادرة</th>
                   <th>Outstanding Quantity<br>كمية ممتازة</th>
+                  <th>Quantity Diff (MoM)<br>فرق الكميات</th>
                   <th>Outstanding Amount<br>المبلغ المستحق</th>
                   <th>Average Price<br>متوسط السعر</th>
                   <th>Actions</th>
@@ -178,7 +175,7 @@
             <h5 class="fw-bold text-primary mb-0">📝 Real-Time Transactional Movement (Item Card)</h5>
             <div class="d-flex gap-2 align-items-center">
               <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetTxFilter()">Show All Inventory</button>
-              <input type="text" id="txSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Type or search item..." oninput="filterTransactionsBySearch(this.value)" style="width: 250px;">
+              <input type="text" id="txSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Search or filter item..." oninput="filterTransactionsBySearch(this.value)" style="width: 250px;">
               <datalist id="inventoryListOptions">
                 <!-- Populated dynamically -->
               </datalist>
@@ -189,7 +186,7 @@
           <form id="txForm" onsubmit="submitTransaction(event)" class="row g-2 mb-3 p-3 bg-light rounded border">
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Item Code</label>
-              <input type="text" id="txItemCode" class="form-control form-control-sm" placeholder="Select or type code" required>
+              <input type="text" id="txItemCode" class="form-control form-control-sm" list="inventoryListOptions" placeholder="Type or select code" oninput="onItemCodeTyped(this.value)" required>
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Voucher No.</label>
@@ -197,9 +194,10 @@
             </div>
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Movement Type</label>
-              <select id="txType" class="form-select form-select-sm" onchange="toggleInvoiceField()">
+              <select id="txType" class="form-select form-select-sm" onchange="toggleMovementFields()">
                 <option value="INBOUND">INBOUND (وارد - Invoiced)</option>
                 <option value="OUTBOUND">OUTBOUND (صادر - Dispatched)</option>
+                <option value="RETURN">RETURN (مرتجع - Item Return)</option>
               </select>
             </div>
             <div class="col-md-2">
@@ -310,32 +308,31 @@
 
   <script>
     let inventoryCatalog = [
-      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, outQty: 0, receivedQty: 42000 },
-      { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00, outQty: 0, receivedQty: 40000 },
-      { id: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00, outQty: 0, receivedQty: 39500 },
-      { id: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00, outQty: 0, receivedQty: 32000 },
-      { id: 5, code: "401", desc: "زيت منظف", openQty: 20904, openAmt: 73301.99, outQty: 0, receivedQty: 20904 }
+      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
+      { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
+      { id: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00 },
+      { id: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00 },
+      { id: 5, code: "401", desc: "زيت منظف", openQty: 20904, openAmt: 73301.99 }
     ];
 
     let transactions = [
-      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50, date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
+      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
     ];
 
     let currentFilterCode = null;
     let chartInstance = null;
 
-    function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const pwd = document.getElementById('password').value;
-      if (email.trim().toLowerCase() === "clerk@noor.com" && pwd === "Noor@123") {
-        document.getElementById('loginSection').classList.add('d-none');
-        document.getElementById('dashboardSection').classList.remove('d-none');
-        renderAll();
-      } else {
-        const alertMsg = document.getElementById('alertMsg');
-        alertMsg.innerText = "Invalid credentials. Use clerk@noor.com / Noor@123";
-        alertMsg.classList.remove('d-none');
+    function initDashboard() {
+      renderAll();
+    }
+
+    function switchTab(tabName) {
+      if (tabName === 'index') {
+        renderItemIndexTable();
+      } else if (tabName === 'opening') {
+        renderOpeningBalanceTable();
+      } else if (tabName === 'transactions') {
+        renderTransactionTable();
       }
     }
 
@@ -347,11 +344,11 @@
       myModal.show();
     }
 
-    function toggleInvoiceField() {
+    function toggleMovementFields() {
       const type = document.getElementById('txType').value;
       const invoiceContainer = document.getElementById('invoiceAmountContainer');
       const costContainer = document.getElementById('costCentreContainer');
-      if (type === 'OUTBOUND') {
+      if (type === 'OUTBOUND' || type === 'RETURN') {
         invoiceContainer.style.display = 'none';
         costContainer.style.display = 'block';
       } else {
@@ -364,6 +361,7 @@
       const triggerEl = document.querySelector('#index-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
+      renderItemIndexTable();
     }
 
     function goToTransactions(code) {
@@ -387,7 +385,6 @@
       const query = val.trim().toLowerCase();
       if (!query) {
         currentFilterCode = null;
-        document.getElementById('txItemCode').value = "";
       } else {
         const matched = inventoryCatalog.find(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
         if (matched) {
@@ -399,6 +396,16 @@
         }
       }
       renderTransactionTable();
+    }
+
+    function onItemCodeTyped(val) {
+      const query = val.trim().toLowerCase();
+      const matched = inventoryCatalog.find(i => i.code.toLowerCase() === query || i.desc.toLowerCase() === query);
+      if (matched) {
+        currentFilterCode = matched.code;
+        document.getElementById('txSearchInput').value = matched.code;
+        renderTransactionTable();
+      }
     }
 
     function renderAll() {
@@ -417,9 +424,46 @@
       });
     }
 
+    function getItemStats(itemCode, selectedMonth) {
+      const itemTxs = transactions.filter(tx => tx.code === itemCode);
+      const item = inventoryCatalog.find(i => i.code === itemCode);
+      const openQty = item ? parseFloat(item.openQty) || 0 : 0;
+      const openAmt = item ? parseFloat(item.openAmt) || 0 : 0;
+
+      let filteredTxs = itemTxs;
+      if (selectedMonth && selectedMonth !== 'ALL') {
+        filteredTxs = itemTxs.filter(tx => tx.date.startsWith(selectedMonth));
+      }
+
+      let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
+      let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
+
+      // Total YTD movements for outstanding calculation
+      let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
+      let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
+      
+      const outstandingQty = openQty + totalIn - totalOut;
+      
+      let additionalInAmt = itemTxs
+        .filter(tx => tx.inQty > 0 && tx.invoiceAmt)
+        .reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
+      
+      const totalAmount = openAmt + additionalInAmt;
+      const avgPrice = outstandingQty > 0 ? (totalAmount / (openQty + totalIn)) : 0;
+      const outstandingAmt = outstandingQty * avgPrice;
+      const qtyDiff = outstandingQty - openQty;
+
+      return { openQty, inQty, outQty, outstandingQty, outstandingAmt, avgPrice, qtyDiff };
+    }
+
     function updateBannerTotals() {
-      let totalQty = inventoryCatalog.reduce((acc, item) => acc + (parseFloat(item.openQty) || 0), 0);
-      let totalAmt = inventoryCatalog.reduce((acc, item) => acc + (parseFloat(item.openAmt) || 0), 0);
+      let totalQty = 0;
+      let totalAmt = 0;
+      inventoryCatalog.forEach(item => {
+        const stats = getItemStats(item.code, 'ALL');
+        totalQty += stats.outstandingQty;
+        totalAmt += stats.outstandingAmt;
+      });
       document.getElementById('bannerQty').innerText = totalQty.toLocaleString(undefined, {minimumFractionDigits: 2});
       document.getElementById('bannerAmt').innerText = totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
     }
@@ -427,7 +471,17 @@
     function renderOpeningBalanceTable() {
       const tbody = document.getElementById('openingBalanceTableBody');
       tbody.innerHTML = '';
-      inventoryCatalog.forEach((item, index) => {
+      
+      const searchQuery = (document.getElementById('openingSearch').value || '').toLowerCase();
+      const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
+
+      const filtered = inventoryCatalog.filter(item => 
+        item.code.toLowerCase().includes(searchQuery) || item.desc.toLowerCase().includes(searchQuery)
+      );
+
+      const paginated = filtered.slice(0, pageSize);
+
+      paginated.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
@@ -443,30 +497,35 @@
     function renderItemIndexTable() {
       const tbody = document.getElementById('itemIndexTableBody');
       tbody.innerHTML = '';
+      const selectedMonth = document.getElementById('indexMonthSelect').value;
+
+      let totalOutQtyAcrossAll = 0;
+      let totalRecAcrossAll = 0;
+
       inventoryCatalog.forEach((item, index) => {
-        const out = parseFloat(item.outQty) || 0;
-        const openQ = parseFloat(item.openQty) || 0;
-        const openA = parseFloat(item.openAmt) || 0;
-        const outstandingQty = openQ - out;
-        const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
-        const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+        const stats = getItemStats(item.code, selectedMonth);
+        totalOutQtyAcrossAll += stats.outQty;
+        totalRecAcrossAll += stats.openQty + stats.inQty;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
           <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
           <td class="fw-semibold">${item.desc}</td>
-          <td class="text-end">${openQ.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-end">${out.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-end fw-bold text-primary">${outstandingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-end fw-bold text-success">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-          <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+          <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end text-success fw-bold">${stats.inQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end text-danger fw-bold">${stats.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end fw-bold text-primary">${stats.outstandingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end fw-bold ${stats.qtyDiff >= 0 ? 'text-success' : 'text-danger'}">${stats.qtyDiff > 0 ? '+' : ''}${stats.qtyDiff.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end fw-bold text-success">SAR ${stats.outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+          <td class="text-end">SAR ${stats.avgPrice.toFixed(2)}</td>
           <td class="text-center">
             <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Entry</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
+      updateBannerTotals();
     }
 
     function renderTransactionTable() {
@@ -482,14 +541,8 @@
       let globalSn = 1;
       sortedCatalog.forEach(item => {
         const itemTxs = transactions.filter(tx => tx.code === item.code);
-        
-        // 1. ALWAYS render the Opening Balance row first as Row 1 for every item
-        const openOut = parseFloat(item.outQty) || 0;
         const openQ = parseFloat(item.openQty) || 0;
         const openA = parseFloat(item.openAmt) || 0;
-        const baseOutstandingQty = openQ; // Initial opening state
-        const baseOutstandingAmt = openA;
-        const baseAvgPrice = baseOutstandingQty > 0 ? (baseOutstandingAmt / baseOutstandingQty) : 0;
 
         tbody.innerHTML += `
           <tr class="table-secondary">
@@ -502,20 +555,28 @@
             <td>OPENING</td>
             <td class="text-success text-end fw-bold">0</td>
             <td class="text-danger text-end fw-bold">0</td>
-            <td class="text-end fw-bold">${baseOutstandingQty.toLocaleString()}</td>
-            <td class="text-end text-success fw-bold">SAR ${baseOutstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            <td class="text-end">SAR ${baseAvgPrice.toFixed(2)}</td>
+            <td class="text-end fw-bold">${openQ.toLocaleString()}</td>
+            <td class="text-end text-success fw-bold">SAR ${openA.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+            <td class="text-end">SAR ${(openQ > 0 ? openA / openQ : 0).toFixed(2)}</td>
             <td>Opening Balance Sheet</td>
           </tr>
         `;
 
-        // 2. Render subsequent transaction rows if any exist
         if (itemTxs.length > 0) {
+          let runningQty = openQ;
+          let runningAmt = openA;
+
           itemTxs.forEach((tx) => {
-            const out = parseFloat(tx.outQty) || 0;
-            const outstandingQty = openQ - out;
-            const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
-            const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+            if (tx.inQty > 0) {
+              runningQty += tx.inQty;
+              runningAmt += tx.invoiceAmt || 0;
+            }
+            if (tx.outQty > 0) {
+              let avgP = runningQty > 0 ? runningAmt / runningQty : 0;
+              runningQty -= tx.outQty;
+              runningAmt -= tx.outQty * avgP;
+            }
+            let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
 
             tbody.innerHTML += `
               <tr>
@@ -528,9 +589,9 @@
                 <td>${tx.voucher}</td>
                 <td class="text-success text-end fw-bold">${tx.inQty || 0}</td>
                 <td class="text-danger text-end fw-bold">${tx.outQty || 0}</td>
-                <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
-                <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+                <td class="text-end fw-bold">${runningQty.toLocaleString()}</td>
+                <td class="text-end text-success fw-bold">SAR ${runningAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td class="text-end">SAR ${currentAvg.toFixed(2)}</td>
                 <td>${tx.costCentre || tx.remarks || '-'}</td>
               </tr>
             `;
@@ -546,16 +607,7 @@
       const openQty = parseFloat(document.getElementById('newOpenQty').value) || 0;
       const openAmt = parseFloat(document.getElementById('newOpenAmt').value) || 0;
 
-      const newItem = {
-        code: code,
-        desc: desc,
-        openQty: openQty,
-        openAmt: openAmt,
-        outQty: 0,
-        receivedQty: openQty
-      };
-
-      inventoryCatalog.push(newItem);
+      inventoryCatalog.push({ code, desc, openQty, openAmt });
       renderAll();
 
       var modalEl = document.getElementById('addItemModal');
@@ -563,6 +615,33 @@
       modal.hide();
       document.getElementById('newItemForm').reset();
       alert('New item successfully added!');
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const lines = evt.target.result.split('\n');
+        let count = 0;
+        lines.forEach((line, idx) => {
+          if (idx === 0) return; // skip header
+          const parts = line.split(',');
+          if (parts.length >= 4) {
+            const code = parts[0].trim();
+            const desc = parts[1].trim();
+            const openQty = parseFloat(parts[2]) || 0;
+            const openAmt = parseFloat(parts[3]) || 0;
+            if (code && !inventoryCatalog.some(i => i.code === code)) {
+              inventoryCatalog.push({ code, desc, openQty, openAmt });
+              count++;
+            }
+          }
+        });
+        renderAll();
+        alert(`Successfully imported ${count} items from file!`);
+      };
+      reader.readAsText(file);
     }
 
     function submitTransaction(e) {
@@ -581,46 +660,49 @@
 
       const found = inventoryCatalog.find(i => i.code === code);
       if (!found) {
-        alert('Please select or enter a valid item code.');
+        alert('Please enter or select a valid item code.');
         return;
       }
 
-      if (type === 'INBOUND') {
-        found.openAmt = (parseFloat(found.openAmt) || 0) + invoiceAmt;
-        found.openQty = (parseFloat(found.openQty) || 0) + qty;
-        found.receivedQty = (parseFloat(found.receivedQty) || found.openQty) + qty;
-      } else if (type === 'OUTBOUND') {
-        found.outQty = (parseFloat(found.outQty) || 0) + qty;
-      }
+      const stats = getItemStats(code, 'ALL');
 
       const newTx = {
         code: code,
         desc: found.desc,
-        openQty: found.openQty,
-        openAmt: found.openAmt,
         date: dateStr,
         voucher: voucher,
-        inQty: type === 'INBOUND' ? qty : 0,
+        inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
         outQty: type === 'OUTBOUND' ? qty : 0,
-        costCentre: type === 'OUTBOUND' ? costCentre : '',
-        remarks: type === 'INBOUND' ? remarks : ''
+        invoiceAmt: type === 'INBOUND' ? invoiceAmt : (type === 'RETURN' ? qty * stats.avgPrice : 0),
+        costCentre: (type === 'OUTBOUND' || type === 'RETURN') ? costCentre : '',
+        remarks: type === 'INBOUND' ? remarks : (type === 'RETURN' ? 'Item Return' : '')
       };
 
       transactions.push(newTx);
       renderAll();
       document.getElementById('txForm').reset();
       document.getElementById('txItemCode').value = code;
-      toggleInvoiceField();
+      toggleMovementFields();
       alert('Transaction movement successfully recorded and updated!');
+    }
+
+    function renderAll() {
+      renderOpeningBalanceTable();
+      renderItemIndexTable();
+      renderTransactionTable();
+      populateDatalist();
+      updateBannerTotals();
     }
 
     function renderContributionChart() {
       const ctx = document.getElementById('contributionChart').getContext('2d');
       const rankedItems = [...inventoryCatalog]
-        .map(item => ({
-          desc: item.desc,
-          ratio: (parseFloat(item.receivedQty) || 0) > 0 ? (((parseFloat(item.outQty) || 0) / parseFloat(item.receivedQty)) * 100).toFixed(1) : 0
-        }))
+        .map(item => {
+          const stats = getItemStats(item.code, 'ALL');
+          const totalIn = stats.openQty + stats.inQty;
+          const ratio = totalIn > 0 ? ((stats.outQty / totalIn) * 100).toFixed(1) : 0;
+          return { desc: item.desc, ratio: parseFloat(ratio) };
+        })
         .sort((a, b) => b.ratio - a.ratio)
         .slice(0, 20);
 
@@ -633,7 +715,7 @@
         data: {
           labels: rankedItems.map(i => i.desc),
           datasets: [{
-            label: 'Outgoing vs Received Contribution Ratio (%)',
+            label: 'Outgoing vs Total Received Contribution Ratio (%)',
             data: rankedItems.map(i => i.ratio),
             backgroundColor: '#1a365d',
             borderRadius: 6
@@ -647,10 +729,6 @@
           }
         }
       });
-    }
-
-    function logout() {
-      location.reload();
     }
   </script>
 </body>
