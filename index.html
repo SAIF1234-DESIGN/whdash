@@ -72,7 +72,7 @@
       </div>
     </div>
 
-    <!-- MASTER MONTH SELECTION BAR (Controls all tabs synchronously as requested) -->
+    <!-- MASTER MONTH SELECTION BAR -->
     <div class="card p-3 mb-3 shadow-sm border-0 bg-white">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
@@ -84,9 +84,12 @@
             <option value="2026-12">December 2026</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted">(Changing this month master-filters Opening Balance, Item Index, and Transactions)</small>
+          <small class="text-muted">(Master-filters Opening Balance, Item Index, and Transactions)</small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+          <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
+            📂 Upload Opening Balances <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
+          </label>
           <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="downloadCurrentStockReport()">📥 Download Current Stock Report</button>
           <button class="btn btn-sm btn-outline-success fw-semibold" onclick="downloadUploadTemplate()">📂 Download Upload Template</button>
         </div>
@@ -124,9 +127,6 @@
                 <option value="25">25</option>
                 <option value="50">50</option>
               </select>
-              <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
-                📂 Upload Inventory <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="handleFileUpload(event)" hidden>
-              </label>
               <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()">+ Add New Item</button>
             </div>
           </div>
@@ -223,7 +223,7 @@
               <input type="number" id="txQty" class="form-control form-control-sm" placeholder="100" required>
             </div>
             <div class="col-md-2" id="invoiceAmountContainer" style="display:none;">
-              <label class="form-label small fw-semibold">Total Invoice (SAR)</label>
+              <label class="form-label small fw-semibold">Total Invoice (SAR) *</label>
               <input type="number" step="0.01" id="txInvoiceAmt" class="form-control form-control-sm" placeholder="2500.00">
             </div>
             <div class="col-md-2" id="costCentreContainer">
@@ -297,7 +297,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold">Add New Inventory Item</h5>
+          <h5 class="modal-title fw-bold">Add New Inventory Item (<span id="modalMonthTitle">October 2026</span>)</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
@@ -341,9 +341,13 @@
       { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
     ];
 
+    let explicitOpenBalances = {}; // Stores manual/file uploaded opening balances per month (e.g. {'2026-11': { '763225': { qty: 4000, amt: 100 } } })
+
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
+
+    const CURRENT_ACTIVE_MONTH = '2026-10'; // Current active month system clock
 
     function initDashboard() {
       renderAll();
@@ -364,6 +368,8 @@
     }
 
     function openAddModal() {
+      const masterMonth = document.getElementById('masterMonthSelect').value;
+      document.getElementById('modalMonthTitle').innerText = masterMonth;
       document.getElementById('newItemForm').reset();
       document.getElementById('newOpenQty').value = 0;
       document.getElementById('newOpenAmt').value = 0.00;
@@ -383,15 +389,18 @@
     function toggleMovementFields() {
       const type = document.getElementById('txType').value;
       const invoiceContainer = document.getElementById('invoiceAmountContainer');
+      const invoiceInput = document.getElementById('txInvoiceAmt');
       const costContainer = document.getElementById('costCentreContainer');
       const stationContainer = document.getElementById('stationContainer');
       
       if (type === 'INBOUND') {
         invoiceContainer.style.display = 'block';
+        invoiceInput.required = true;
         costContainer.style.display = 'none';
         stationContainer.style.display = 'none';
       } else {
         invoiceContainer.style.display = 'none';
+        invoiceInput.required = false;
         costContainer.style.display = 'block';
         stationContainer.style.display = 'block';
       }
@@ -478,8 +487,25 @@
       });
     }
 
+    function isMonthEnded(targetMonth) {
+      if (targetMonth === 'ALL') return true;
+      // If targetMonth is strictly before CURRENT_ACTIVE_MONTH, it's ended.
+      return targetMonth < CURRENT_ACTIVE_MONTH;
+    }
+
     function getRolloverStats(itemCode, targetMonth) {
-      if (targetMonth === 'ALL' || targetMonth === '2026-09') {
+      if (targetMonth === '2026-09' || targetMonth === '2026-10') {
+        if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
+          return explicitOpenBalances[targetMonth][itemCode];
+        }
+      }
+
+      // If month is not ended yet (e.g. future or current unended month), opening balance is blank (0) unless explicitly uploaded
+      if (!isMonthEnded(targetMonth) && targetMonth !== CURRENT_ACTIVE_MONTH) {
+        return { openQty: 0, openAmt: 0 };
+      }
+
+      if (targetMonth === '2026-09') {
         const item = inventoryCatalog.find(i => i.code === itemCode);
         return {
           openQty: item ? parseFloat(item.openQty) || 0 : 0,
@@ -504,7 +530,6 @@
       const openQty = rollover.openQty;
       const openAmt = rollover.openAmt;
 
-      // Cumulative YTD movements prior or up to selected month
       let filteredTxs = itemTxs;
       if (selectedMonth && selectedMonth !== 'ALL') {
         filteredTxs = itemTxs.filter(tx => tx.date.startsWith(selectedMonth));
@@ -724,6 +749,7 @@
       document.getElementById('txDateInput').value = tx.date;
       document.getElementById('txSubmitBtn').innerText = "Update Entry Row";
       
+      toggleMovementFields();
       const triggerEl = document.querySelector('#tx-tab');
       new bootstrap.Tab(triggerEl).show();
     }
@@ -734,24 +760,39 @@
       const desc = document.getElementById('newDesc').value;
       const openQty = parseFloat(document.getElementById('newOpenQty').value) || 0;
       const openAmt = parseFloat(document.getElementById('newOpenAmt').value) || 0;
+      const masterMonth = document.getElementById('masterMonthSelect').value;
 
-      inventoryCatalog.push({ code, desc, openQty, openAmt });
+      if (!inventoryCatalog.some(i => i.code === code)) {
+        inventoryCatalog.push({ code, desc, openQty, openAmt });
+      }
+
+      if (masterMonth !== 'ALL') {
+        if (!explicitOpenBalances[masterMonth]) explicitOpenBalances[masterMonth] = {};
+        explicitOpenBalances[masterMonth][code] = { openQty, openAmt };
+      }
+
       renderAll();
 
       var modalEl = document.getElementById('addItemModal');
       var modal = bootstrap.Modal.getInstance(modalEl);
       modal.hide();
       document.getElementById('newItemForm').reset();
-      alert('New item successfully added!');
+      alert('Item successfully added!');
     }
 
-    function handleFileUpload(e) {
+    function promptUploadMonth(e) {
       const file = e.target.files[0];
       if (!file) return;
+
+      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
+      if (!uploadMonth) return;
+
       const reader = new FileReader();
       reader.onload = function(evt) {
         const lines = evt.target.result.split('\n');
         let count = 0;
+        if (!explicitOpenBalances[uploadMonth]) explicitOpenBalances[uploadMonth] = {};
+
         lines.forEach((line, idx) => {
           if (idx === 0) return;
           const parts = line.split(',');
@@ -760,14 +801,19 @@
             const desc = parts[1].trim();
             const openQty = parseFloat(parts[2]) || 0;
             const openAmt = parseFloat(parts[3]) || 0;
-            if (code && !inventoryCatalog.some(i => i.code === code)) {
-              inventoryCatalog.push({ code, desc, openQty, openAmt });
+            
+            if (code) {
+              if (!inventoryCatalog.some(i => i.code === code)) {
+                inventoryCatalog.push({ code, desc, openQty: 0, openAmt: 0 });
+              }
+              explicitOpenBalances[uploadMonth][code] = { openQty, openAmt };
               count++;
             }
           }
         });
+        document.getElementById('masterMonthSelect').value = uploadMonth;
         renderAll();
-        alert(`Successfully imported ${count} items from file!`);
+        alert(`Successfully imported ${count} opening balances for ${uploadMonth}!`);
       };
       reader.readAsText(file);
     }
@@ -784,6 +830,11 @@
       const station = document.getElementById('txStation').value;
       const remarks = document.getElementById('txRemarks').value;
       const dateStr = document.getElementById('txDateInput').value;
+
+      if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
+        alert('Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
+        return;
+      }
 
       const found = inventoryCatalog.find(i => i.code === code);
       if (!found) {
