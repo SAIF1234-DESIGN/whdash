@@ -92,7 +92,7 @@
             <option value="2026-12">December 2026 (Future)</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted" data-i18n="masterMonthHint">(Months without opening balances or transactions show blank)</small>
+          <small class="text-muted" data-i18n="masterMonthHint">(Calculated strictly based on movement dates)</small>
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
@@ -345,7 +345,7 @@
         subHeader: "Main Warehouse / Southern Warehouse Stock Sheet",
         staffClerk: "Staff Clerk",
         masterMonthLabel: "📅 Master Active Month Selector:",
-        masterMonthHint: "(Months without opening balances or transactions show blank)",
+        masterMonthHint: "(Calculated strictly based on movement dates)",
         uploadOpenBtn: "Upload Opening Balances",
         downloadReportBtn: "Download Stock Report",
         downloadTemplateBtn: "Download Template",
@@ -410,7 +410,7 @@
         subHeader: "ورقة مخزون المستودع الرئيسي / المستودع الجنوبي",
         staffClerk: "موظف مبيعات",
         masterMonthLabel: "📅 محدد الشهر النشط الرئيسي:",
-        masterMonthHint: "(الشهور التي ليس لها أرصدة افتتاحية أو حركات تظهر فارغة)",
+        masterMonthHint: "(يتم الحساب بدقة بناءً على تواريخ حركات المخزون)",
         uploadOpenBtn: "رفع الأرصدة الافتتاحية",
         downloadReportBtn: "تحميل تقرير المخزون",
         downloadTemplateBtn: "تحميل قالب الرفع",
@@ -518,8 +518,6 @@
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
-
-    const CURRENT_ACTIVE_MONTH = '2026-10';
 
     function initDashboard() {
       renderAll();
@@ -669,6 +667,36 @@
       return false;
     }
 
+    // STRICT MOVEMENT-DATE BASED ROLLOVER CALCULATION
+    function calculateBalanceUpToDate(itemCode, upToDateStr) {
+      const item = inventoryCatalog.find(i => i.code === itemCode);
+      let qty = item ? parseFloat(item.openQty) || 0 : 0;
+      let amt = item ? parseFloat(item.openAmt) || 0 : 0;
+
+      // Sort all transactions chronologically by movement date (tx.date)
+      const sortedTxs = [...transactions]
+        .filter(tx => tx.code === itemCode && tx.date <= upToDateStr)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      sortedTxs.forEach(tx => {
+        let inQ = parseFloat(tx.inQty) || 0;
+        let outQ = parseFloat(tx.outQty) || 0;
+        let invAmt = parseFloat(tx.invoiceAmt) || 0;
+
+        if (inQ > 0) {
+          qty += inQ;
+          amt += invAmt;
+        }
+        if (outQ > 0) {
+          let avgP = qty > 0 ? amt / qty : 0;
+          qty -= outQ;
+          amt -= outQ * avgP;
+        }
+      });
+
+      return { qty, amt };
+    }
+
     function getRolloverStats(itemCode, targetMonth) {
       if (!hasMonthData(targetMonth)) {
         return { openQty: null, openAmt: null };
@@ -686,14 +714,19 @@
         };
       }
       
+      // Calculate precise ending balance of the previous month based on movement dates (e.g. up to last day of prev month)
       let prevMonthStr = '2026-09';
       if (targetMonth === '2026-11') prevMonthStr = '2026-10';
       if (targetMonth === '2026-12') prevMonthStr = '2026-11';
       
-      const stats = getItemStats(itemCode, prevMonthStr);
+      // Get last date of previous month (e.g. '2026-10-31')
+      const [year, month] = prevMonthStr.split('-');
+      const lastDayDate = new Date(year, month, 0).toISOString().split('T')[0];
+
+      const prevStats = calculateBalanceUpToDate(itemCode, lastDayDate);
       return {
-        openQty: stats.outstandingQty,
-        openAmt: stats.outstandingAmt
+        openQty: prevStats.qty,
+        openAmt: prevStats.amt
       };
     }
 
@@ -717,21 +750,33 @@
       let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
 
+      // Total movement up to selected month or all transactions
       let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
       
-      const outstandingQty = openQty + totalIn - totalOut;
-      
-      let additionalInAmt = itemTxs
-        .filter(tx => tx.inQty > 0 && tx.invoiceAmt)
-        .reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
-      
-      const totalAmount = openAmt + additionalInAmt;
-      const avgPrice = outstandingQty > 0 ? (totalAmount / (openQty + totalIn)) : 0;
-      const outstandingAmt = outstandingQty * avgPrice;
-      const qtyDiff = outstandingQty - openQty;
+      // Calculate based on movement date up to end of selected month if specific month
+      let outstandingQty = openQty + inQty;
+      let totalAmount = openAmt + filteredTxs.filter(tx => tx.inQty > 0 && tx.invoiceAmt).reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
 
-      return { openQty, inQty, outQty, outstandingQty, outstandingAmt, avgPrice, qtyDiff };
+      if (selectedMonth !== 'ALL') {
+        // Evaluate chronological balance up to end of selected month using movement dates
+        const [y, m] = selectedMonth.split('-');
+        const endOfMonthDate = new Date(y, m, 0).toISOString().split('T')[0];
+        const upToDateStats = calculateBalanceUpToDate(itemCode, endOfMonthDate);
+        outstandingQty = upToDateStats.qty;
+        let upToDateAmt = upToDateStats.amt;
+        const avgPrice = outstandingQty > 0 ? (upToDateAmt / outstandingQty) : 0;
+        const qtyDiff = outstandingQty - openQty;
+        return { openQty, inQty, outQty, outstandingQty, outstandingAmt: upToDateAmt, avgPrice, qtyDiff };
+      }
+      
+      const outstandingAmt = openQty + totalIn - totalOut > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) : 0;
+      const avgPrice = (openQty + totalIn) > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + totalIn) : 0;
+      const finalOutstandingQty = openQty + totalIn - totalOut;
+      const finalOutstandingAmt = finalOutstandingQty * avgPrice;
+      const qtyDiff = finalOutstandingQty - openQty;
+
+      return { openQty, inQty, outQty, outstandingQty: finalOutstandingQty, outstandingAmt: finalOutstandingAmt, avgPrice, qtyDiff };
     }
 
     function updateBannerTotals() {
@@ -896,7 +941,10 @@
           let runningQty = openQ;
           let runningAmt = openA;
 
-          itemTxs.forEach((tx) => {
+          // Sort transactions by movement date chronologically
+          const chronologicalTxs = [...itemTxs].sort((a, b) => a.date.localeCompare(b.date));
+
+          chronologicalTxs.forEach((tx) => {
             if (tx.inQty > 0) {
               runningQty += tx.inQty;
               runningAmt += tx.invoiceAmt || 0;
