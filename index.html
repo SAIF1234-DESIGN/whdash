@@ -94,7 +94,14 @@
       <div class="tab-pane fade show active" id="tabOpeningBalance" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h5 class="fw-bold text-primary mb-0">📦 Opening Balance Sheet (01/10/2026)</h5>
+            <div class="d-flex align-items-center gap-3">
+              <h5 class="fw-bold text-primary mb-0">📦 Opening Balance Sheet</h5>
+              <select id="openingMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="renderOpeningBalanceTable()" style="width: 160px;">
+                <option value="2026-10" selected>October 2026</option>
+                <option value="2026-11">November 2026</option>
+                <option value="2026-12">December 2026</option>
+              </select>
+            </div>
             <div class="d-flex gap-2 align-items-center">
               <input type="text" id="openingSearch" class="form-control form-control-sm" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()">
               <select id="openingPageSize" class="form-select form-select-sm" onchange="renderOpeningBalanceTable()" style="width: 80px;">
@@ -184,6 +191,7 @@
           
           <!-- Transaction Entry Form -->
           <form id="txForm" onsubmit="submitTransaction(event)" class="row g-2 mb-3 p-3 bg-light rounded border">
+            <input type="hidden" id="editTxId">
             <div class="col-md-2">
               <label class="form-label small fw-semibold">Item Code</label>
               <input type="text" id="txItemCode" class="form-control form-control-sm" list="inventoryListOptions" placeholder="Type or select code" oninput="onItemCodeTyped(this.value)" required>
@@ -221,7 +229,7 @@
               <input type="text" id="txRemarks" class="form-control form-control-sm" placeholder="Optional notes">
             </div>
             <div class="col-md-3 d-flex align-items-end">
-              <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
+              <button type="submit" id="txSubmitBtn" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
             </div>
           </form>
 
@@ -241,7 +249,7 @@
                   <th>Outstanding Qty<br>كمية ممتازة</th>
                   <th>Outstanding Amount<br>المبلغ المستحق</th>
                   <th>Average Price<br>متوسط السعر</th>
-                  <th>Cost Centre / Remarks</th>
+                  <th>Actions / Remarks</th>
                 </tr>
               </thead>
               <tbody id="transactionTableBody">
@@ -316,7 +324,7 @@
     ];
 
     let transactions = [
-      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
+      { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
     ];
 
     let currentFilterCode = null;
@@ -424,11 +432,31 @@
       });
     }
 
+    function getRolloverStats(itemCode, targetMonth) {
+      if (targetMonth === '2026-10') {
+        const item = inventoryCatalog.find(i => i.code === itemCode);
+        return {
+          openQty: item ? parseFloat(item.openQty) || 0 : 0,
+          openAmt: item ? parseFloat(item.openAmt) || 0 : 0
+        };
+      }
+      
+      // Calculate previous month ending balance for rolling over
+      let prevMonthStr = '2026-10';
+      if (targetMonth === '2026-12') prevMonthStr = '2026-11';
+      
+      const stats = getItemStats(itemCode, prevMonthStr);
+      return {
+        openQty: stats.outstandingQty,
+        openAmt: stats.outstandingAmt
+      };
+    }
+
     function getItemStats(itemCode, selectedMonth) {
       const itemTxs = transactions.filter(tx => tx.code === itemCode);
-      const item = inventoryCatalog.find(i => i.code === itemCode);
-      const openQty = item ? parseFloat(item.openQty) || 0 : 0;
-      const openAmt = item ? parseFloat(item.openAmt) || 0 : 0;
+      const rollover = getRolloverStats(itemCode, selectedMonth);
+      const openQty = rollover.openQty;
+      const openAmt = rollover.openAmt;
 
       let filteredTxs = itemTxs;
       if (selectedMonth && selectedMonth !== 'ALL') {
@@ -438,7 +466,7 @@
       let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
 
-      // Total YTD movements for outstanding calculation
+      // YTD movements for outstanding calculation
       let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
       
@@ -457,10 +485,11 @@
     }
 
     function updateBannerTotals() {
+      const selectedMonth = document.getElementById('indexMonthSelect') ? document.getElementById('indexMonthSelect').value : '2026-10';
       let totalQty = 0;
       let totalAmt = 0;
       inventoryCatalog.forEach(item => {
-        const stats = getItemStats(item.code, 'ALL');
+        const stats = getItemStats(item.code, selectedMonth);
         totalQty += stats.outstandingQty;
         totalAmt += stats.outstandingAmt;
       });
@@ -472,6 +501,7 @@
       const tbody = document.getElementById('openingBalanceTableBody');
       tbody.innerHTML = '';
       
+      const selectedMonth = document.getElementById('openingMonthSelect').value;
       const searchQuery = (document.getElementById('openingSearch').value || '').toLowerCase();
       const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
 
@@ -482,13 +512,14 @@
       const paginated = filtered.slice(0, pageSize);
 
       paginated.forEach((item, index) => {
+        const rollover = getRolloverStats(item.code, selectedMonth);
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
           <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
           <td class="fw-semibold">${item.desc}</td>
-          <td class="text-end">${(parseFloat(item.openQty) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-end">${(parseFloat(item.openAmt) || 0) > 0 ? (parseFloat(item.openAmt)).toLocaleString(undefined, {minimumFractionDigits: 2}) : '0'}</td>
+          <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+          <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -499,13 +530,8 @@
       tbody.innerHTML = '';
       const selectedMonth = document.getElementById('indexMonthSelect').value;
 
-      let totalOutQtyAcrossAll = 0;
-      let totalRecAcrossAll = 0;
-
       inventoryCatalog.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
-        totalOutQtyAcrossAll += stats.outQty;
-        totalRecAcrossAll += stats.openQty + stats.inQty;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -539,6 +565,8 @@
       }
 
       let globalSn = 1;
+      const today = new Date('2026-10-29'); // Simulated current date
+
       sortedCatalog.forEach(item => {
         const itemTxs = transactions.filter(tx => tx.code === item.code);
         const openQ = parseFloat(item.openQty) || 0;
@@ -578,6 +606,11 @@
             }
             let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
 
+            // 3-Day Edit Rule Check
+            const txDate = new Date(tx.date);
+            const diffDays = (today - txDate) / (1000 * 60 * 60 * 24);
+            const canEdit = diffDays <= 3;
+
             tbody.innerHTML += `
               <tr>
                 <td class="text-center fw-bold">${globalSn++}</td>
@@ -592,12 +625,32 @@
                 <td class="text-end fw-bold">${runningQty.toLocaleString()}</td>
                 <td class="text-end text-success fw-bold">SAR ${runningAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td class="text-end">SAR ${currentAvg.toFixed(2)}</td>
-                <td>${tx.costCentre || tx.remarks || '-'}</td>
+                <td>
+                  ${tx.costCentre || tx.remarks || '-'}
+                  ${canEdit ? `<button class="btn btn-sm btn-outline-warning py-0 px-1 ms-2" onclick="editTransaction(${tx.id})">Edit</button>` : `<small class="text-muted ms-1">(Locked)</small>`}
+                </td>
               </tr>
             `;
           });
         }
       });
+    }
+
+    function editTransaction(id) {
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      document.getElementById('editTxId').value = tx.id;
+      document.getElementById('txItemCode').value = tx.code;
+      document.getElementById('txVoucher').value = tx.voucher;
+      document.getElementById('txQty').value = tx.inQty > 0 ? tx.inQty : tx.outQty;
+      document.getElementById('txInvoiceAmt').value = tx.invoiceAmt || 0;
+      document.getElementById('txRemarks').value = tx.remarks || '';
+      document.getElementById('txDay').value = tx.date.split('-')[2];
+      document.getElementById('txSubmitBtn').innerText = "Update Entry Row";
+      
+      const triggerEl = document.querySelector('#tx-tab');
+      new bootstrap.Tab(triggerEl).show();
     }
 
     function addNewItem(e) {
@@ -625,7 +678,7 @@
         const lines = evt.target.result.split('\n');
         let count = 0;
         lines.forEach((line, idx) => {
-          if (idx === 0) return; // skip header
+          if (idx === 0) return;
           const parts = line.split(',');
           if (parts.length >= 4) {
             const code = parts[0].trim();
@@ -646,6 +699,7 @@
 
     function submitTransaction(e) {
       e.preventDefault();
+      const editId = document.getElementById('editTxId').value;
       const code = document.getElementById('txItemCode').value;
       const voucher = document.getElementById('txVoucher').value;
       const type = document.getElementById('txType').value;
@@ -664,26 +718,47 @@
         return;
       }
 
-      const stats = getItemStats(code, 'ALL');
+      if (editId) {
+        // Update existing transaction
+        const txIndex = transactions.findIndex(t => t.id == editId);
+        if (txIndex !== -1) {
+          transactions[txIndex] = {
+            id: parseInt(editId),
+            code: code,
+            desc: found.desc,
+            date: dateStr,
+            voucher: voucher,
+            inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
+            outQty: type === 'OUTBOUND' ? qty : 0,
+            invoiceAmt: type === 'INBOUND' ? invoiceAmt : 0,
+            costCentre: (type === 'OUTBOUND' || type === 'RETURN') ? costCentre : '',
+            remarks: remarks
+          };
+        }
+        document.getElementById('editTxId').value = '';
+        document.getElementById('txSubmitBtn').innerText = "Post Entry Row";
+      } else {
+        const stats = getItemStats(code, 'ALL');
+        const newTx = {
+          id: Date.now(),
+          code: code,
+          desc: found.desc,
+          date: dateStr,
+          voucher: voucher,
+          inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
+          outQty: type === 'OUTBOUND' ? qty : 0,
+          invoiceAmt: type === 'INBOUND' ? invoiceAmt : (type === 'RETURN' ? qty * stats.avgPrice : 0),
+          costCentre: (type === 'OUTBOUND' || type === 'RETURN') ? costCentre : '',
+          remarks: type === 'INBOUND' ? remarks : (type === 'RETURN' ? 'Item Return' : '')
+        };
+        transactions.push(newTx);
+      }
 
-      const newTx = {
-        code: code,
-        desc: found.desc,
-        date: dateStr,
-        voucher: voucher,
-        inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
-        outQty: type === 'OUTBOUND' ? qty : 0,
-        invoiceAmt: type === 'INBOUND' ? invoiceAmt : (type === 'RETURN' ? qty * stats.avgPrice : 0),
-        costCentre: (type === 'OUTBOUND' || type === 'RETURN') ? costCentre : '',
-        remarks: type === 'INBOUND' ? remarks : (type === 'RETURN' ? 'Item Return' : '')
-      };
-
-      transactions.push(newTx);
       renderAll();
       document.getElementById('txForm').reset();
       document.getElementById('txItemCode').value = code;
       toggleMovementFields();
-      alert('Transaction movement successfully recorded and updated!');
+      alert('Transaction successfully recorded and updated!');
     }
 
     function renderAll() {
