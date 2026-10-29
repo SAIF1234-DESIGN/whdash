@@ -359,14 +359,12 @@
       }
     }
 
-    // Step 1: Click from Opening Balance -> goes to Item Index
     function goToItemIndex(code) {
       const triggerEl = document.querySelector('#index-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
     }
 
-    // Step 2: Click from Item Index -> goes to Transactions filtered for that item
     function goToTransactions(code) {
       currentFilterCode = code;
       const triggerEl = document.querySelector('#tx-tab');
@@ -465,36 +463,96 @@
       const tbody = document.getElementById('transactionTableBody');
       tbody.innerHTML = '';
       
-      const filteredTxs = currentFilterCode ? transactions.filter(tx => tx.code === currentFilterCode) : transactions;
+      if (currentFilterCode) {
+        // Filtered view for specific item
+        const filteredTxs = transactions.filter(tx => tx.code === currentFilterCode);
+        if (filteredTxs.length === 0) {
+          // If no transactions yet, show the catalog item state
+          const item = inventoryCatalog.find(i => i.code === currentFilterCode);
+          if (item) {
+            const out = parseFloat(item.outQty) || 0;
+            const openQ = parseFloat(item.openQty) || 0;
+            const openA = parseFloat(item.openAmt) || 0;
+            const outstandingQty = openQ - out;
+            const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
+            const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
 
-      filteredTxs.forEach((tx, index) => {
-        const out = parseFloat(tx.outQty) || 0;
-        const openQ = parseFloat(tx.openQty) || 0;
-        const openA = parseFloat(tx.openAmt) || 0;
-        const outstandingQty = openQ - out;
-        const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
-        const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+            tbody.innerHTML = `
+              <tr>
+                <td class="text-center fw-bold">1</td>
+                <td class="text-center"><span class="badge bg-light text-dark border">${item.code}</span></td>
+                <td class="fw-semibold">${item.desc}</td>
+                <td class="text-end">${openQ.toLocaleString()}</td>
+                <td class="text-end">SAR ${openA.toLocaleString()}</td>
+                <td>2026-10-01</td>
+                <td>OPENING</td>
+                <td class="text-success text-end fw-bold">0</td>
+                <td class="text-danger text-end fw-bold">0</td>
+                <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
+                <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+                <td>Initial Opening Balance</td>
+              </tr>
+            `;
+          }
+        } else {
+          filteredTxs.forEach((tx, index) => {
+            const out = parseFloat(tx.outQty) || 0;
+            const openQ = parseFloat(tx.openQty) || 0;
+            const openA = parseFloat(tx.openAmt) || 0;
+            const outstandingQty = openQ - out;
+            const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
+            const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="text-center fw-bold">${index + 1}</td>
-          <td class="text-center"><span class="badge bg-light text-dark border">${tx.code}</span></td>
-          <td class="fw-semibold">${tx.desc}</td>
-          <td class="text-end">${openQ.toLocaleString()}</td>
-          <td class="text-end">SAR ${openA.toLocaleString()}</td>
-          <td>${tx.date}</td>
-          <td>${tx.voucher}</td>
-          <td class="text-success text-end fw-bold">${tx.inQty || 0}</td>
-          <td class="text-danger text-end fw-bold">${tx.outQty || 0}</td>
-          <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
-          <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-          <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
-          <td>${tx.costCentre || tx.remarks || '-'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="text-center fw-bold">${index + 1}</td>
+              <td class="text-center"><span class="badge bg-light text-dark border">${tx.code}</span></td>
+              <td class="fw-semibold">${tx.desc}</td>
+              <td class="text-end">${openQ.toLocaleString()}</td>
+              <td class="text-end">SAR ${openA.toLocaleString()}</td>
+              <td>${tx.date}</td>
+              <td>${tx.voucher}</td>
+              <td class="text-success text-end fw-bold">${tx.inQty || 0}</td>
+              <td class="text-danger text-end fw-bold">${tx.outQty || 0}</td>
+              <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
+              <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+              <td>${tx.costCentre || tx.remarks || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } else {
+        // Show All Inventory: Ensure every item in catalog appears even without transactions
+        inventoryCatalog.forEach((item, index) => {
+          const out = parseFloat(item.outQty) || 0;
+          const openQ = parseFloat(item.openQty) || 0;
+          const openA = parseFloat(item.openAmt) || 0;
+          const outstandingQty = openQ - out;
+          const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
+          const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
 
-      // Set default selected code in form if not set
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-center fw-bold">${index + 1}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${item.code}</span></td>
+            <td class="fw-semibold">${item.desc}</td>
+            <td class="text-end">${openQ.toLocaleString()}</td>
+            <td class="text-end">SAR ${openA.toLocaleString()}</td>
+            <td>2026-10-01</td>
+            <td>OPENING</td>
+            <td class="text-success text-end fw-bold">0</td>
+            <td class="text-danger text-end fw-bold">${out}</td>
+            <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
+            <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+            <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
+            <td>Base Catalog Item</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
       if (!document.getElementById('txItemCode').value && inventoryCatalog.length > 0) {
         document.getElementById('txItemCode').value = inventoryCatalog[0].code;
       }
@@ -537,7 +595,6 @@
       const remarks = document.getElementById('txRemarks').value;
       const dayInput = document.getElementById('txDay').value;
 
-      // Format date as 2026-10-XX
       const formattedDay = String(dayInput).padStart(2, '0');
       const dateStr = `2026-10-${formattedDay}`;
 
@@ -571,7 +628,7 @@
       transactions.push(newTx);
       renderAll();
       document.getElementById('txForm').reset();
-      document.getElementById('txItemCode').value = code; // Keep selected item
+      document.getElementById('txItemCode').value = code;
       toggleInvoiceField();
       alert('Transaction movement successfully recorded and updated!');
     }
