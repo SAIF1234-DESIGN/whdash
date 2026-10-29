@@ -176,11 +176,12 @@
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold text-primary mb-0">📝 Real-Time Transactional Movement (Item Card)</h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
               <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetTxFilter()">Show All Inventory</button>
-              <select id="txFilterSelect" class="form-select form-select-sm" onchange="filterTransactionsByDropdown(this.value)">
-                <option value="">-- Search / Filter Item --</option>
-              </select>
+              <input type="text" id="txSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Type or search item..." oninput="filterTransactionsBySearch(this.value)" style="width: 250px;">
+              <datalist id="inventoryListOptions">
+                <!-- Populated dynamically -->
+              </datalist>
             </div>
           </div>
           
@@ -371,24 +372,31 @@
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
       document.getElementById('txItemCode').value = code;
-      document.getElementById('txFilterSelect').value = code;
+      document.getElementById('txSearchInput').value = code;
       renderTransactionTable();
     }
 
     function resetTxFilter() {
       currentFilterCode = null;
-      document.getElementById('txFilterSelect').value = "";
-      document.getElementById('txItemCode').value = ""; // Clear input on Show All
+      document.getElementById('txSearchInput').value = "";
+      document.getElementById('txItemCode').value = "";
       renderTransactionTable();
     }
 
-    function filterTransactionsByDropdown(code) {
-      if (!code) {
+    function filterTransactionsBySearch(val) {
+      const query = val.trim().toLowerCase();
+      if (!query) {
         currentFilterCode = null;
         document.getElementById('txItemCode').value = "";
       } else {
-        currentFilterCode = code;
-        document.getElementById('txItemCode').value = code;
+        const matched = inventoryCatalog.find(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
+        if (matched) {
+          currentFilterCode = matched.code;
+          document.getElementById('txItemCode').value = matched.code;
+        } else {
+          currentFilterCode = query;
+          document.getElementById('txItemCode').value = query;
+        }
       }
       renderTransactionTable();
     }
@@ -397,15 +405,15 @@
       renderOpeningBalanceTable();
       renderItemIndexTable();
       renderTransactionTable();
-      populateDropdown();
+      populateDatalist();
       updateBannerTotals();
     }
 
-    function populateDropdown() {
-      const select = document.getElementById('txFilterSelect');
-      select.innerHTML = '<option value="">-- Search / Filter Item --</option>';
+    function populateDatalist() {
+      const datalist = document.getElementById('inventoryListOptions');
+      datalist.innerHTML = '';
       inventoryCatalog.forEach(item => {
-        select.innerHTML += `<option value="${item.code}">${item.code} - ${item.desc}</option>`;
+        datalist.innerHTML += `<option value="${item.code}">${item.code} - ${item.desc}</option>`;
       });
     }
 
@@ -465,49 +473,46 @@
       const tbody = document.getElementById('transactionTableBody');
       tbody.innerHTML = '';
       
-      // Sort inventory items and their corresponding transactions neatly
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
       if (currentFilterCode) {
-        sortedCatalog = sortedCatalog.filter(i => i.code === currentFilterCode);
+        sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentFilterCode.toLowerCase() || i.desc.toLowerCase().includes(currentFilterCode.toLowerCase()));
       }
 
       let globalSn = 1;
       sortedCatalog.forEach(item => {
         const itemTxs = transactions.filter(tx => tx.code === item.code);
         
-        if (itemTxs.length === 0) {
-          // Render base item row if no transactions exist yet
-          const out = parseFloat(item.outQty) || 0;
-          const openQ = parseFloat(item.openQty) || 0;
-          const openA = parseFloat(item.openAmt) || 0;
-          const outstandingQty = openQ - out;
-          const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
-          const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
+        // 1. ALWAYS render the Opening Balance row first as Row 1 for every item
+        const openOut = parseFloat(item.outQty) || 0;
+        const openQ = parseFloat(item.openQty) || 0;
+        const openA = parseFloat(item.openAmt) || 0;
+        const baseOutstandingQty = openQ; // Initial opening state
+        const baseOutstandingAmt = openA;
+        const baseAvgPrice = baseOutstandingQty > 0 ? (baseOutstandingAmt / baseOutstandingQty) : 0;
 
-          tbody.innerHTML += `
-            <tr>
-              <td class="text-center fw-bold">${globalSn++}</td>
-              <td class="text-center"><span class="badge bg-light text-dark border">${item.code}</span></td>
-              <td class="fw-semibold">${item.desc}</td>
-              <td class="text-end">${openQ.toLocaleString()}</td>
-              <td class="text-end">SAR ${openA.toLocaleString()}</td>
-              <td>2026-10-01</td>
-              <td>OPENING</td>
-              <td class="text-success text-end fw-bold">0</td>
-              <td class="text-danger text-end fw-bold">0</td>
-              <td class="text-end fw-bold">${outstandingQty.toLocaleString()}</td>
-              <td class="text-end text-success fw-bold">SAR ${outstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-              <td class="text-end">SAR ${avgPrice.toFixed(2)}</td>
-              <td>Opening Balance</td>
-            </tr>
-          `;
-        } else {
-          // Render all transactions grouped under this item code
+        tbody.innerHTML += `
+          <tr class="table-secondary">
+            <td class="text-center fw-bold">${globalSn++}</td>
+            <td class="text-center"><span class="badge bg-dark">${item.code}</span></td>
+            <td class="fw-semibold">${item.desc} (Opening Balance)</td>
+            <td class="text-end">${openQ.toLocaleString()}</td>
+            <td class="text-end">SAR ${openA.toLocaleString()}</td>
+            <td>2026-10-01</td>
+            <td>OPENING</td>
+            <td class="text-success text-end fw-bold">0</td>
+            <td class="text-danger text-end fw-bold">0</td>
+            <td class="text-end fw-bold">${baseOutstandingQty.toLocaleString()}</td>
+            <td class="text-end text-success fw-bold">SAR ${baseOutstandingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+            <td class="text-end">SAR ${baseAvgPrice.toFixed(2)}</td>
+            <td>Opening Balance Sheet</td>
+          </tr>
+        `;
+
+        // 2. Render subsequent transaction rows if any exist
+        if (itemTxs.length > 0) {
           itemTxs.forEach((tx) => {
             const out = parseFloat(tx.outQty) || 0;
-            const openQ = parseFloat(tx.openQty) || 0;
-            const openA = parseFloat(tx.openAmt) || 0;
             const outstandingQty = openQ - out;
             const outstandingAmt = openA > 0 ? (openA / openQ) * outstandingQty : 0;
             const avgPrice = outstandingQty > 0 ? (outstandingAmt / outstandingQty) : 0;
