@@ -57,18 +57,26 @@
     
     <!-- Top Summary Banner -->
     <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
-      Total Outstanding Quantity (<span id="bannerMonthLabel">October 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; Total Outstanding Amount: SAR <span id="bannerAmt">0.00</span>
+      <span data-i18n="bannerQtyText">Total Outstanding Quantity</span> (<span id="bannerMonthLabel">October 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; <span data-i18n="bannerAmtText">Total Outstanding Amount</span>: SAR <span id="bannerAmt">0.00</span>
     </div>
 
     <!-- Company Header Navbar -->
-    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm flex-wrap gap-2">
       <div>
         <h4 class="fw-bold mb-0 text-primary">مؤسسة النور المتحدة للوقود</h4>
         <h5 class="fw-bold mb-0 text-dark">Al Noor United Fuel Est</h5>
-        <small class="text-muted"><span class="badge bg-success">● Direct Session Active</span> Main Warehouse / Southern Warehouse Stock Sheet</small>
+        <small class="text-muted"><span class="badge bg-success">● Direct Session Active</span> <span data-i18n="subHeader">Main Warehouse / Southern Warehouse Stock Sheet</span></small>
       </div>
       <div class="d-flex align-items-center gap-3">
-        <span class="badge bg-secondary px-3 py-2" id="userBadge">Staff Clerk</span>
+        <!-- Language Switcher -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="fw-bold small mb-0 text-secondary">🌐 Lang:</label>
+          <select id="langSelect" class="form-select form-select-sm fw-bold" onchange="changeLanguage(this.value)" style="width: 110px;">
+            <option value="en" selected>English</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+        <span class="badge bg-secondary px-3 py-2" data-i18n="staffClerk">Staff Clerk</span>
       </div>
     </div>
 
@@ -76,7 +84,7 @@
     <div class="card p-3 mb-3 shadow-sm border-0 bg-white">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
-          <label class="fw-bold text-primary mb-0">📅 Master Active Month Selector:</label>
+          <label class="fw-bold text-primary mb-0" data-i18n="masterMonthLabel">📅 Master Active Month Selector:</label>
           <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 180px;">
             <option value="2026-09">September 2026</option>
             <option value="2026-10" selected>October 2026 (Current)</option>
@@ -84,14 +92,14 @@
             <option value="2026-12">December 2026 (Future)</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted">(Months without opening balances or transactions show completely blank)</small>
+          <small class="text-muted" data-i18n="masterMonthHint">(Months without opening balances or transactions show blank)</small>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
-            📂 Upload Opening Balances <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
+            📂 <span data-i18n="uploadOpenBtn">Upload Opening Balances</span> <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
           </label>
-          <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="downloadCurrentStockReport()">📥 Download Current Stock Report</button>
-          <button class="btn btn-sm btn-outline-success fw-semibold" onclick="downloadUploadTemplate()">📂 Download Upload Template</button>
+          <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="downloadCurrentStockReport()">📥 <span data-i18n="downloadReportBtn">Download Stock Report</span></button>
+          <button class="btn btn-sm btn-outline-success fw-semibold" onclick="downloadUploadTemplate()">📂 <span data-i18n="downloadTemplateBtn">Download Template</span></button>
         </div>
       </div>
     </div>
@@ -99,16 +107,16 @@
     <!-- SEPARATED NAVIGATION TABS -->
     <ul class="nav nav-pills mb-3" id="dashboardTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab">1. Opening Balance (الرصيد الافتتاحي)</button>
+        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab" data-i18n="tab1">1. Opening Balance (الرصيد الافتتاحي)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab">2. Item Index (سجل الأصناف)</button>
+        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab" data-i18n="tab2">2. Item Index (سجل الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab">3. Transactions / Item Card (حركة الأصناف)</button>
+        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab" data-i18n="tab3">3. Transactions / Item Card (حركة الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tabAnalytics" type="button" role="tab" onclick="renderContributionChart()">4. Top 20 Outgoing Ratio (تحليل الصادر)</button>
+        <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tabAnalytics" type="button" role="tab" onclick="renderContributionChart()" data-i18n="tab4">4. Top 20 Outgoing Ratio (تحليل الصادر)</button>
       </li>
     </ul>
 
@@ -118,32 +126,32 @@
       <div class="tab-pane fade show active" id="tabOpeningBalance" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h5 class="fw-bold text-primary mb-0">📦 Opening Balance Sheet (<span id="openingTabTitleMonth">October 2026</span>)</h5>
+            <h5 class="fw-bold text-primary mb-0">📦 <span data-i18n="openingSheetTitle">Opening Balance Sheet</span> (<span id="openingTabTitleMonth">October 2026</span>)</h5>
             <div class="d-flex gap-2 align-items-center">
-              <input type="text" id="openingSearch" class="form-control form-control-sm" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()">
+              <input type="text" id="openingSearch" class="form-control form-control-sm" data-i18n-placeholder="searchPlaceholder" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()">
               <select id="openingPageSize" class="form-select form-select-sm" onchange="renderOpeningBalanceTable()" style="width: 80px;">
                 <option value="5">5</option>
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
               </select>
-              <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()">+ Add New Item</button>
+              <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
             </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th style="width: 50px;">م SN<br><small>رقم</small></th>
-                  <th style="width: 120px;">ItemCode<br><small>رمز الصنف</small></th>
-                  <th>Item Name / Description<br><small>اسم المنتج / الوصف</small></th>
-                  <th style="width: 180px;">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
-                  <th style="width: 180px;">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
-                  <th style="width: 100px;">Actions<br><small>الإجراءات</small></th>
+                  <th style="width: 50px;" data-i18n="thSn">م SN<br><small>رقم</small></th>
+                  <th style="width: 120px;" data-i18n="thItemCode">ItemCode<br><small>رمز الصنف</small></th>
+                  <th data-i18n="thItemDesc">Item Name / Description<br><small>اسم المنتج / الوصف</small></th>
+                  <th style="width: 180px;" data-i18n="thOpeningBal">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
+                  <th style="width: 180px;" data-i18n="thOpeningAmt">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
+                  <th style="width: 100px;" data-i18n="thActions">Actions<br><small>الإجراءات</small></th>
                 </tr>
               </thead>
               <tbody id="openingBalanceTableBody">
-                <!-- Dynamically populated or blank -->
+                <!-- Dynamically populated -->
               </tbody>
             </table>
           </div>
@@ -154,31 +162,31 @@
       <div class="tab-pane fade" id="tabItemIndex" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h5 class="fw-bold text-primary mb-0">📊 Master Item Index & Outstanding Stock Sheet</h5>
+            <h5 class="fw-bold text-primary mb-0" data-i18n="indexSheetTitle">📊 Master Item Index & Outstanding Stock Sheet</h5>
             <div class="d-flex align-items-center gap-2">
-              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetIndexFilter()">Show All Inventory</button>
-              <input type="text" id="indexSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Search code or name..." oninput="filterIndexBySearch(this.value)" style="width: 240px;">
+              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetIndexFilter()" data-i18n="showAllBtn">Show All Inventory</button>
+              <input type="text" id="indexSearchInput" class="form-control form-control-sm" list="inventoryListOptions" data-i18n-placeholder="searchIndexPlaceholder" placeholder="🔍 Search code or name..." oninput="filterIndexBySearch(this.value)" style="width: 240px;">
             </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th>م SN</th>
-                  <th>Item Code<br>رمز الصنف</th>
-                  <th>Item Name / Description<br>اسم المنتج / الوصف</th>
-                  <th>Opening Balance<br>الرصيد الافتتاحي</th>
-                  <th>Incoming Qty<br>الكمية الواردة</th>
-                  <th>Outgoing Qty<br>الكمية الصادرة</th>
-                  <th>Outstanding Quantity<br>كمية ممتازة</th>
-                  <th>Quantity Diff (MoM)<br>فرق الكميات</th>
-                  <th>Outstanding Amount<br>المبلغ المستحق</th>
-                  <th>Average Price<br>متوسط السعر</th>
-                  <th>Actions</th>
+                  <th data-i18n="thSn">م SN</th>
+                  <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
+                  <th data-i18n="thItemDesc">Item Name / Description<br>اسم المنتج / الوصف</th>
+                  <th data-i18n="thOpeningBal">Opening Balance<br>الرصيد الافتتاحي</th>
+                  <th data-i18n="thIncomingQty">Incoming Qty<br>الكمية الواردة</th>
+                  <th data-i18n="thOutgoingQty">Outgoing Qty<br>الكمية الصادرة</th>
+                  <th data-i18n="thOutstandingQty">Outstanding Quantity<br>كمية ممتازة</th>
+                  <th data-i18n="thQtyDiff">Quantity Diff (MoM)<br>فرق الكميات</th>
+                  <th data-i18n="thOutstandingAmt">Outstanding Amount<br>المبلغ المستحق</th>
+                  <th data-i18n="thAvgPrice">Average Price<br>متوسط السعر</th>
+                  <th data-i18n="thActions">Actions</th>
                 </tr>
               </thead>
               <tbody id="itemIndexTableBody">
-                <!-- Dynamically populated or blank -->
+                <!-- Dynamically populated -->
               </tbody>
             </table>
           </div>
@@ -189,10 +197,10 @@
       <div class="tab-pane fade" id="tabTransactions" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold text-primary mb-0">📝 Real-Time Transactional Movement (Item Card)</h5>
+            <h5 class="fw-bold text-primary mb-0" data-i18n="txSheetTitle">📝 Real-Time Transactional Movement (Item Card)</h5>
             <div class="d-flex gap-2 align-items-center">
-              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetTxFilter()">Show All Inventory</button>
-              <input type="text" id="txSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Search or filter item..." oninput="filterTransactionsBySearch(this.value)" style="width: 250px;">
+              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetTxFilter()" data-i18n="showAllBtn">Show All Inventory</button>
+              <input type="text" id="txSearchInput" class="form-control form-control-sm" list="inventoryListOptions" data-i18n-placeholder="searchTxPlaceholder" placeholder="🔍 Search or filter item..." oninput="filterTransactionsBySearch(this.value)" style="width: 250px;">
               <datalist id="inventoryListOptions">
                 <!-- Populated dynamically -->
               </datalist>
@@ -203,47 +211,47 @@
           <form id="txForm" onsubmit="submitTransaction(event)" class="row g-2 mb-3 p-3 bg-light rounded border">
             <input type="hidden" id="editTxId">
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Item Code</label>
-              <input type="text" id="txItemCode" class="form-control form-control-sm" list="inventoryListOptions" placeholder="Type or select code" oninput="onItemCodeTyped(this.value)" required>
+              <label class="form-label small fw-semibold" data-i18n="labelItemCode">Item Code</label>
+              <input type="text" id="txItemCode" class="form-control form-control-sm" list="inventoryListOptions" data-i18n-placeholder="placeholderCode" placeholder="Type or select code" oninput="onItemCodeTyped(this.value)" required>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Voucher No.</label>
+              <label class="form-label small fw-semibold" data-i18n="labelVoucher">Voucher No.</label>
               <input type="text" id="txVoucher" class="form-control form-control-sm" placeholder="V-102" required>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Movement Type</label>
+              <label class="form-label small fw-semibold" data-i18n="labelMovementType">Movement Type</label>
               <select id="txType" class="form-select form-select-sm" onchange="toggleMovementFields()">
-                <option value="OUTGOING" selected>OUTGOING / صادر (Dispatched)</option>
-                <option value="INBOUND">INBOUND / وارد (Invoiced)</option>
-                <option value="RETURN">RETURN / مرتجع (Item Return)</option>
+                <option value="OUTGOING" selected data-i18n="optOutgoing">OUTGOING / صادر (Dispatched)</option>
+                <option value="INBOUND" data-i18n="optInbound">INBOUND / وارد (Invoiced)</option>
+                <option value="RETURN" data-i18n="optReturn">RETURN / مرتجع (Item Return)</option>
               </select>
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Quantity</label>
+              <label class="form-label small fw-semibold" data-i18n="labelQty">Quantity</label>
               <input type="number" id="txQty" class="form-control form-control-sm" placeholder="100" required>
             </div>
             <div class="col-md-2" id="invoiceAmountContainer" style="display:none;">
-              <label class="form-label small fw-semibold">Total Invoice (SAR) *</label>
+              <label class="form-label small fw-semibold" data-i18n="labelInvoice">Total Invoice (SAR) *</label>
               <input type="number" step="0.01" id="txInvoiceAmt" class="form-control form-control-sm" placeholder="2500.00">
             </div>
             <div class="col-md-2" id="costCentreContainer">
-              <label class="form-label small fw-semibold">Cost Centre (مركز تكلفة)</label>
-              <input type="text" id="txCostCentre" class="form-control form-control-sm" placeholder="Optional">
+              <label class="form-label small fw-semibold" data-i18n="labelCostCentre">Cost Centre (مركز تكلفة)</label>
+              <input type="text" id="txCostCentre" class="form-control form-control-sm" data-i18n-placeholder="placeholderOptional" placeholder="Optional">
             </div>
             <div class="col-md-2" id="stationContainer">
-              <label class="form-label small fw-semibold">Station / WH (المحطة)</label>
-              <input type="text" id="txStation" class="form-control form-control-sm" placeholder="Optional">
+              <label class="form-label small fw-semibold" data-i18n="labelStation">Station / Warehouse / Location (الموقع / المحطة / المستودع)</label>
+              <input type="text" id="txStation" class="form-control form-control-sm" data-i18n-placeholder="placeholderOptional" placeholder="Optional">
             </div>
             <div class="col-md-2">
-              <label class="form-label small fw-semibold">Date (YYYY-MM-DD)</label>
+              <label class="form-label small fw-semibold" data-i18n="labelDate">Date (YYYY-MM-DD)</label>
               <input type="date" id="txDateInput" class="form-control form-control-sm" value="2026-10-29" required>
             </div>
             <div class="col-md-3">
-              <label class="form-label small fw-semibold">Remarks (ملاحظات)</label>
-              <input type="text" id="txRemarks" class="form-control form-control-sm" placeholder="Optional notes">
+              <label class="form-label small fw-semibold" data-i18n="labelRemarks">Remarks (ملاحظات)</label>
+              <input type="text" id="txRemarks" class="form-control form-control-sm" data-i18n-placeholder="placeholderNotes" placeholder="Optional notes">
             </div>
             <div class="col-md-3 d-flex align-items-end">
-              <button type="submit" id="txSubmitBtn" class="btn btn-primary btn-sm w-100 fw-bold">Post Entry Row</button>
+              <button type="submit" id="txSubmitBtn" class="btn btn-primary btn-sm w-100 fw-bold" data-i18n="postEntryBtn">Post Entry Row</button>
             </div>
           </form>
 
@@ -251,23 +259,23 @@
             <table class="table table-bordered table-hover align-middle">
               <thead>
                 <tr>
-                  <th>SN</th>
-                  <th>Item Code<br>رمز الصنف</th>
-                  <th>Item Name / Description<br>اسم المنتج / الوصف</th>
-                  <th>Opening Balance</th>
-                  <th>Opening Amount</th>
-                  <th>Date<br>تاريخ</th>
-                  <th>Voucher No.<br>رقم القسيمة</th>
-                  <th>Incoming Qty<br>الكمية الواردة</th>
-                  <th>Outgoing Qty<br>الكمية الصادرة</th>
-                  <th>Outstanding Qty<br>كمية ممتازة</th>
-                  <th>Outstanding Amount<br>المبلغ المستحق</th>
-                  <th>Average Price<br>متوسط السعر</th>
-                  <th>Actions / Remarks</th>
+                  <th data-i18n="thSn">SN</th>
+                  <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
+                  <th data-i18n="thItemDesc">Item Name / Description<br>اسم المنتج / الوصف</th>
+                  <th data-i18n="thOpeningBal">Opening Balance</th>
+                  <th data-i18n="thOpeningAmt">Opening Amount</th>
+                  <th data-i18n="thDate">Date<br>تاريخ</th>
+                  <th data-i18n="thVoucher">Voucher No.<br>رقم القسيمة</th>
+                  <th data-i18n="thIncomingQty">Incoming Qty<br>الكمية الواردة</th>
+                  <th data-i18n="thOutgoingQty">Outgoing Qty<br>الكمية الصادرة</th>
+                  <th data-i18n="thOutstandingQty">Outstanding Qty<br>كمية ممتازة</th>
+                  <th data-i18n="thOutstandingAmt">Outstanding Amount<br>المبلغ المستحق</th>
+                  <th data-i18n="thAvgPrice">Average Price<br>متوسط السعر</th>
+                  <th data-i18n="thActionsRemarks">Actions / Remarks</th>
                 </tr>
               </thead>
               <tbody id="transactionTableBody">
-                <!-- Dynamically populated or blank -->
+                <!-- Dynamically populated -->
               </tbody>
             </table>
           </div>
@@ -277,7 +285,7 @@
       <!-- TAB 4: ANALYTICS / TOP 20 OUTGOING RATIO -->
       <div class="tab-pane fade" id="tabAnalytics" role="tabpanel">
         <div class="card p-4 shadow-sm border-0 mb-4">
-          <h5 class="fw-bold text-primary mb-3">📈 Top 20 Outgoing Items Contribution Ratios</h5>
+          <h5 class="fw-bold text-primary mb-3" data-i18n="analyticsTitle">📈 Top 20 Outgoing Items Contribution Ratios</h5>
           <div class="row">
             <div class="col-md-12">
               <div class="chart-container" style="position: relative; height: 420px;">
@@ -297,28 +305,28 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold">Add New Inventory Item (<span id="modalMonthTitle">October 2026</span>)</h5>
+          <h5 class="modal-title fw-bold" data-i18n="modalTitle">Add New Inventory Item</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <form id="newItemForm" onsubmit="addNewItem(event)">
             <div class="mb-3">
-              <label class="form-label fw-semibold">Item Code (رمز الصنف)</label>
+              <label class="form-label fw-semibold" data-i18n="labelModalCode">Item Code (رمز الصنف)</label>
               <input type="text" id="newCode" class="form-control" required>
             </div>
             <div class="mb-3">
-              <label class="form-label fw-semibold">Item Description (اسم المنتج / الوصف)</label>
+              <label class="form-label fw-semibold" data-i18n="labelModalDesc">Item Description (اسم المنتج / الوصف)</label>
               <input type="text" id="newDesc" class="form-control" required>
             </div>
             <div class="mb-3">
-              <label class="form-label fw-semibold">Opening Balance (الرصيد الافتتاحي)</label>
+              <label class="form-label fw-semibold" data-i18n="labelModalQty">Opening Balance (الرصيد الافتتاحي)</label>
               <input type="number" id="newOpenQty" class="form-control" value="0" required>
             </div>
             <div class="mb-3">
-              <label class="form-label fw-semibold">Opening Amount (المبلغ الافتتاحي)</label>
+              <label class="form-label fw-semibold" data-i18n="labelModalAmt">Opening Amount (المبلغ الافتتاحي)</label>
               <input type="number" step="0.01" id="newOpenAmt" class="form-control" value="0.00" required>
             </div>
-            <button type="submit" class="btn btn-success w-100 fw-bold">Save Item</button>
+            <button type="submit" class="btn btn-success w-100 fw-bold" data-i18n="saveItemBtn">Save Item</button>
           </form>
         </div>
       </div>
@@ -329,6 +337,170 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
+    // Localization Dictionary
+    const translations = {
+      en: {
+        bannerQtyText: "Total Outstanding Quantity",
+        bannerAmtText: "Total Outstanding Amount",
+        subHeader: "Main Warehouse / Southern Warehouse Stock Sheet",
+        staffClerk: "Staff Clerk",
+        masterMonthLabel: "📅 Master Active Month Selector:",
+        masterMonthHint: "(Months without opening balances or transactions show blank)",
+        uploadOpenBtn: "Upload Opening Balances",
+        downloadReportBtn: "Download Stock Report",
+        downloadTemplateBtn: "Download Template",
+        tab1: "1. Opening Balance (الرصيد الافتتاحي)",
+        tab2: "2. Item Index (سجل الأصناف)",
+        tab3: "3. Transactions / Item Card (حركة الأصناف)",
+        tab4: "4. Top 20 Outgoing Ratio (تحليل الصادر)",
+        openingSheetTitle: "Opening Balance Sheet",
+        searchPlaceholder: "🔍 Search inventory...",
+        addItemBtn: "+ Add New Item",
+        thSn: "م SN",
+        thItemCode: "Item Code\nرمز الصنف",
+        thItemDesc: "Item Name / Description\nاسم المنتج / الوصف",
+        thOpeningBal: "Opening Balance\nالرصيد الافتتاحي",
+        thOpeningAmt: "Opening Amount\nالمبلغ المتبقي",
+        thActions: "Actions\nالإجراءات",
+        thIncomingQty: "Incoming Qty\nالكمية الواردة",
+        thOutgoingQty: "Outgoing Qty\nالكمية الصادرة",
+        thOutstandingQty: "Outstanding Qty\nكمية ممتازة",
+        thQtyDiff: "Quantity Diff (MoM)\nفرق الكميات",
+        thOutstandingAmt: "Outstanding Amount\nالمبلغ المستحق",
+        thAvgPrice: "Average Price\nمتوسط السعر",
+        thDate: "Date\nتاريخ",
+        thVoucher: "Voucher No.\nرقم القسيمة",
+        thActionsRemarks: "Actions / Remarks",
+        indexSheetTitle: "📊 Master Item Index & Outstanding Stock Sheet",
+        showAllBtn: "Show All Inventory",
+        searchIndexPlaceholder: "🔍 Search code or name...",
+        txSheetTitle: "📝 Real-Time Transactional Movement (Item Card)",
+        searchTxPlaceholder: "🔍 Search or filter item...",
+        labelItemCode: "Item Code",
+        placeholderCode: "Type or select code",
+        labelVoucher: "Voucher No.",
+        labelMovementType: "Movement Type",
+        optOutgoing: "OUTGOING / صادر (Dispatched)",
+        optInbound: "INBOUND / وارد (Invoiced)",
+        optReturn: "RETURN / مرتجع (Item Return)",
+        labelQty: "Quantity",
+        labelInvoice: "Total Invoice (SAR) *",
+        labelCostCentre: "Cost Centre (مركز تكلفة)",
+        placeholderOptional: "Optional",
+        labelStation: "Station / Warehouse / Location (الموقع / المحطة / المستودع)",
+        labelDate: "Date (YYYY-MM-DD)",
+        labelRemarks: "Remarks (ملاحظات)",
+        placeholderNotes: "Optional notes",
+        postEntryBtn: "Post Entry Row",
+        updateEntryBtn: "Update Entry Row",
+        analyticsTitle: "📈 Top 20 Outgoing Items Contribution Ratios",
+        modalTitle: "Add New Inventory Item",
+        labelModalCode: "Item Code (رمز الصنف)",
+        labelModalDesc: "Item Description (اسم المنتج / الوصف)",
+        labelModalQty: "Opening Balance (الرصيد الافتتاحي)",
+        labelModalAmt: "Opening Amount (المبلغ الافتتاحي)",
+        saveItemBtn: "Save Item",
+        deleteBtn: "Delete",
+        editBtn: "Edit",
+        lockedBtn: "(Locked)"
+      },
+      ar: {
+        bannerQtyText: "إجمالي الكمية المتبقية",
+        bannerAmtText: "إجمالي المبلغ المتبقي",
+        subHeader: "ورقة مخزون المستودع الرئيسي / المستودع الجنوبي",
+        staffClerk: "موظف مبيعات",
+        masterMonthLabel: "📅 محدد الشهر النشط الرئيسي:",
+        masterMonthHint: "(الشهور التي ليس لها أرصدة افتتاحية أو حركات تظهر فارغة)",
+        uploadOpenBtn: "رفع الأرصدة الافتتاحية",
+        downloadReportBtn: "تحميل تقرير المخزون",
+        downloadTemplateBtn: "تحميل قالب الرفع",
+        tab1: "1. الرصيد الافتتاحي (Opening Balance)",
+        tab2: "2. سجل الأصناف (Item Index)",
+        tab3: "3. حركة الأصناف (Transactions / Item Card)",
+        tab4: "4. تحليل الصادر (Top 20 Outgoing Ratio)",
+        openingSheetTitle: "جدول الرصيد الافتتاحي",
+        searchPlaceholder: "🔍 بحث في المخزون...",
+        addItemBtn: "+ إضافة صنف جديد",
+        thSn: "م SN",
+        thItemCode: "رمز الصنف\nItem Code",
+        thItemDesc: "اسم المنتج / الوصف\nItem Name / Description",
+        thOpeningBal: "الرصيد الافتتاحي\nOpening Balance",
+        thOpeningAmt: "المبلغ المتبقي\nOpening Amount",
+        thActions: "الإجراءات\nActions",
+        thIncomingQty: "الكمية الواردة\nIncoming Qty",
+        thOutgoingQty: "الكمية الصادرة\nOutgoing Qty",
+        thOutstandingQty: "كمية ممتازة\nOutstanding Qty",
+        thQtyDiff: "فرق الكميات (MoM)\nQuantity Diff",
+        thOutstandingAmt: "المبلغ المستحق\nOutstanding Amount",
+        thAvgPrice: "متوسط السعر\nAverage Price",
+        thDate: "تاريخ\nDate",
+        thVoucher: "رقم القسيمة\nVoucher No.",
+        thActionsRemarks: "الإجراءات / الملاحظات",
+        indexSheetTitle: "📊 جدول سجل الأصناف الرئيسي والمخزون الممتاز",
+        showAllBtn: "عرض كل المخزون",
+        searchIndexPlaceholder: "🔍 بحث برمز أو اسم الصنف...",
+        txSheetTitle: "📝 الحركة الفعلية للمخزون (بطاقة الصنف)",
+        searchTxPlaceholder: "🔍 بحث أو تصفية الصنف...",
+        labelItemCode: "رمز الصنف",
+        placeholderCode: "اكتب أو اختر الرمز",
+        labelVoucher: "رقم القسيمة",
+        labelMovementType: "نوع الحركة",
+        optOutgoing: "صادر / OUTGOING (صادر للمحطات)",
+        optInbound: "وارد / INBOUND (بفاتورة)",
+        optReturn: "مرتجع / RETURN (مرتجع صنف)",
+        labelQty: "الكمية",
+        labelInvoice: "إجمالي الفاتورة (ريال) *",
+        labelCostCentre: "مركز تكلفة (Cost Centre)",
+        placeholderOptional: "اختياري",
+        labelStation: "الموقع / المحطة / المستودع (Station / Warehouse / Location)",
+        labelDate: "التاريخ (YYYY-MM-DD)",
+        labelRemarks: "ملاحظات (Remarks)",
+        placeholderNotes: "ملاحظات اختياريّة",
+        postEntryBtn: "ترحيل سطر الحركة",
+        updateEntryBtn: "تحديث سطر الحركة",
+        analyticsTitle: "📈 نسب مساهمة أعلى 20 صنفاً صادراً",
+        modalTitle: "إضافة صنف مخزون جديد",
+        labelModalCode: "رمز الصنف (Item Code)",
+        labelModalDesc: "وصف المنتج (Item Description)",
+        labelModalQty: "الرصيد الافتتاحي (Opening Balance)",
+        labelModalAmt: "المبلغ الافتتاحي (Opening Amount)",
+        saveItemBtn: "حفظ الصنف",
+        deleteBtn: "حذف",
+        editBtn: "تعديل",
+        lockedBtn: "(مغلق)"
+      }
+    };
+
+    let currentLang = 'en';
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      const htmlTag = document.documentElement;
+      if (lang === 'ar') {
+        htmlTag.setAttribute('dir', 'rtl');
+        htmlTag.setAttribute('lang', 'ar');
+      } else {
+        htmlTag.setAttribute('dir', 'ltr');
+        htmlTag.setAttribute('lang', 'en');
+      }
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[currentLang][key]) {
+          el.innerHTML = translations[currentLang][key];
+        }
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (translations[currentLang][key]) {
+          el.setAttribute('placeholder', translations[currentLang][key]);
+        }
+      });
+
+      renderAll();
+    }
+
     let inventoryCatalog = [
       { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
       { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
@@ -341,11 +513,13 @@
       { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
     ];
 
-    let explicitOpenBalances = {}; // Stores manual/file uploaded opening balances per month e.g. {'2026-10': {...}}
+    let explicitOpenBalances = {}; 
 
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
+
+    const CURRENT_ACTIVE_MONTH = '2026-10';
 
     function initDashboard() {
       renderAll();
@@ -376,11 +550,11 @@
     }
 
     function deleteItem(code) {
-      if (confirm(`Are you sure you want to delete item code ${code}?`)) {
+      if (confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الصنف ${code}؟` : `Are you sure you want to delete item code ${code}?`)) {
         inventoryCatalog = inventoryCatalog.filter(i => i.code !== code);
         transactions = transactions.filter(t => t.code !== code);
         renderAll();
-        alert('Item successfully deleted.');
+        alert(currentLang === 'ar' ? 'تم حذف الصنف بنجاح.' : 'Item successfully deleted.');
       }
     }
 
@@ -487,15 +661,11 @@
 
     function hasMonthData(targetMonth) {
       if (targetMonth === 'ALL') return true;
-      // Check if explicit opening balances were created for this month
       if (explicitOpenBalances[targetMonth] && Object.keys(explicitOpenBalances[targetMonth]).length > 0) return true;
-      // Check if any transactions occurred in this month
       const monthTxs = transactions.filter(tx => tx.date.startsWith(targetMonth));
       if (monthTxs.length > 0) return true;
-      // Default initial loaded month (October 2026 or September 2026 baseline)
       if (targetMonth === '2026-10' && inventoryCatalog.length > 0) return true;
       if (targetMonth === '2026-09' && inventoryCatalog.length > 0) return true;
-      
       return false;
     }
 
@@ -598,7 +768,6 @@
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
       document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : 'October 2026';
 
-      // If month has no data/transactions/opening balances, leave table completely blank
       if (!hasMonthData(selectedMonth)) {
         return;
       }
@@ -624,7 +793,7 @@
           <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">Delete</button>
+            <button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -760,7 +929,7 @@
                 <td class="text-end">SAR ${currentAvg.toFixed(2)}</td>
                 <td>
                   ${trackingDetail}
-                  ${canEdit ? `<button class="btn btn-sm btn-outline-warning py-0 px-1 ms-2" onclick="editTransaction(${tx.id})">Edit</button>` : `<small class="text-muted ms-1">(Locked)</small>`}
+                  ${canEdit ? `<button class="btn btn-sm btn-outline-warning py-0 px-1 ms-2" onclick="editTransaction(${tx.id})">${translations[currentLang].editBtn}</button>` : `<small class="text-muted ms-1">${translations[currentLang].lockedBtn}</small>`}
                 </td>
               </tr>
             `;
@@ -782,7 +951,7 @@
       document.getElementById('txStation').value = tx.station || '';
       document.getElementById('txRemarks').value = tx.remarks || '';
       document.getElementById('txDateInput').value = tx.date;
-      document.getElementById('txSubmitBtn').innerText = "Update Entry Row";
+      document.getElementById('txSubmitBtn').innerText = translations[currentLang].updateEntryBtn;
       
       toggleMovementFields();
       const triggerEl = document.querySelector('#tx-tab');
@@ -812,14 +981,14 @@
       var modal = bootstrap.Modal.getInstance(modalEl);
       modal.hide();
       document.getElementById('newItemForm').reset();
-      alert('Item successfully added!');
+      alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
     function promptUploadMonth(e) {
       const file = e.target.files[0];
       if (!file) return;
 
-      const uploadMonth = prompt("Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
+      const uploadMonth = prompt(currentLang === 'ar' ? "أدخل الشهر الذي تقوم برفع الأرصدة الافتتاحية له (مثال YYYY-MM مثل 2026-10):" : "Enter the month for which you are uploading these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
       if (!uploadMonth) return;
 
       const reader = new FileReader();
@@ -848,7 +1017,7 @@
         });
         document.getElementById('masterMonthSelect').value = uploadMonth;
         renderAll();
-        alert(`Successfully imported ${count} opening balances for ${uploadMonth}!`);
+        alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح لشهر ${uploadMonth}!` : `Successfully imported ${count} opening balances for ${uploadMonth}!`);
       };
       reader.readAsText(file);
     }
@@ -867,13 +1036,13 @@
       const dateStr = document.getElementById('txDateInput').value;
 
       if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
-        alert('Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
+        alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' : 'Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
         return;
       }
 
       const found = inventoryCatalog.find(i => i.code === code);
       if (!found) {
-        alert('Please enter or select a valid item code.');
+        alert(currentLang === 'ar' ? 'الرجاء إدخال أو اختيار رمز صنف صحيح.' : 'Please enter or select a valid item code.');
         return;
       }
 
@@ -895,7 +1064,7 @@
           };
         }
         document.getElementById('editTxId').value = '';
-        document.getElementById('txSubmitBtn').innerText = "Post Entry Row";
+        document.getElementById('txSubmitBtn').innerText = translations[currentLang].postEntryBtn;
       } else {
         const stats = getItemStats(code, 'ALL');
         const newTx = {
@@ -918,7 +1087,7 @@
       document.getElementById('txForm').reset();
       document.getElementById('txItemCode').value = code;
       toggleMovementFields();
-      alert('Transaction successfully recorded and updated!');
+      alert(currentLang === 'ar' ? 'تم تسجيل وتحديث الحركة بنجاح!' : 'Transaction successfully recorded and updated!');
     }
 
     function downloadCurrentStockReport() {
@@ -975,7 +1144,7 @@
         data: {
           labels: rankedItems.map(i => i.desc),
           datasets: [{
-            label: 'Outgoing vs Total Received Contribution Ratio (%)',
+            label: currentLang === 'ar' ? 'نسبة الصادر إلى الوارد الإجمالي (%)' : 'Outgoing vs Total Received Contribution Ratio (%)',
             data: rankedItems.map(i => i.ratio),
             backgroundColor: '#1a365d',
             borderRadius: 6
@@ -985,7 +1154,7 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Contribution Ratio (%)' } }
+            y: { beginAtZero: true, max: 100, title: { display: true, text: currentLang === 'ar' ? 'نسبة المساهمة (%)' : 'Contribution Ratio (%)' } }
           }
         }
       });
