@@ -57,7 +57,7 @@
     
     <!-- Top Summary Banner -->
     <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
-      <span data-i18n="bannerQtyText">Total Outstanding Quantity</span> (<span id="bannerMonthLabel">October 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; <span data-i18n="bannerAmtText">Total Outstanding Amount</span>: SAR <span id="bannerAmt">0.00</span>
+      <span id="bannerTitleLabel" data-i18n="bannerQtyText">Total Outstanding Quantity</span> (<span id="bannerMonthLabel">October 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; <span id="bannerAmtTitleLabel" data-i18n="bannerAmtText">Total Outstanding Amount</span>: SAR <span id="bannerAmt">0.00</span>
     </div>
 
     <!-- Company Header Navbar -->
@@ -92,13 +92,21 @@
             <option value="2026-12">December 2026 (Future)</option>
             <option value="ALL">All Months / YTD</option>
           </select>
-          <small class="text-muted" data-i18n="masterMonthHint">(Calculated strictly based on movement dates)</small>
+          <small class="text-muted" data-i18n="masterMonthHint">(Strictly calculated by movement dates)</small>
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer">
             📂 <span data-i18n="uploadOpenBtn">Upload Opening Balances</span> <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
           </label>
-          <button class="btn btn-sm btn-outline-primary fw-semibold" onclick="downloadCurrentStockReport()">📥 <span data-i18n="downloadReportBtn">Download Stock Report</span></button>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-primary fw-semibold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              📥 <span data-i18n="downloadReportDropdown">Download Reports</span>
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item fw-semibold" href="#" onclick="downloadStockMovementReport()">📊 Stock Movement Report (ملخص الحركة)</a></li>
+              <li><a class="dropdown-item fw-semibold" href="#" onclick="downloadStockLedgerReport()">📑 Stock Ledger Report (دفتر الأستاذ التفصيلي)</a></li>
+            </ul>
+          </div>
           <button class="btn btn-sm btn-outline-success fw-semibold" onclick="downloadUploadTemplate()">📂 <span data-i18n="downloadTemplateBtn">Download Template</span></button>
         </div>
       </div>
@@ -107,13 +115,13 @@
     <!-- SEPARATED NAVIGATION TABS -->
     <ul class="nav nav-pills mb-3" id="dashboardTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab" data-i18n="tab1">1. Opening Balance (الرصيد الافتتاحي)</button>
+        <button class="nav-link active" id="opening-tab" data-bs-toggle="pill" data-bs-target="#tabOpeningBalance" type="button" role="tab" onclick="switchTab('opening')" data-i18n="tab1">1. Opening Balance (الرصيد الافتتاحي)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab" data-i18n="tab2">2. Item Index (سجل الأصناف)</button>
+        <button class="nav-link" id="index-tab" data-bs-toggle="pill" data-bs-target="#tabItemIndex" type="button" role="tab" onclick="switchTab('index')" data-i18n="tab2">2. Item Index (سجل الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab" data-i18n="tab3">3. Transactions / Item Card (حركة الأصناف)</button>
+        <button class="nav-link" id="tx-tab" data-bs-toggle="pill" data-bs-target="#tabTransactions" type="button" role="tab" onclick="switchTab('transactions')" data-i18n="tab3">3. Transactions / Item Card (حركة الأصناف)</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tabAnalytics" type="button" role="tab" onclick="renderContributionChart()" data-i18n="tab4">4. Top 20 Outgoing Ratio (تحليل الصادر)</button>
@@ -144,10 +152,11 @@
                 <tr>
                   <th style="width: 50px;" data-i18n="thSn">م SN<br><small>رقم</small></th>
                   <th style="width: 120px;" data-i18n="thItemCode">ItemCode<br><small>رمز الصنف</small></th>
-                  <th data-i18n="thItemDesc">Item Name / Description<br><small>اسم المنتج / الوصف</small></th>
-                  <th style="width: 180px;" data-i18n="thOpeningBal">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
-                  <th style="width: 180px;" data-i18n="thOpeningAmt">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
-                  <th style="width: 100px;" data-i18n="thActions">Actions<br><small>الإجراءات</small></th>
+                  <th data-i18n="thItemDescEn">Item Name (English)<br><small>اسم الصنف (إنجليزي)</small></th>
+                  <th data-i18n="thItemDescAr">Item Name (Arabic)<br><small>اسم الصنف (عربي)</small></th>
+                  <th style="width: 160px;" data-i18n="thOpeningBal">Opening Balance<br><small>الرصيد الافتتاحي</small></th>
+                  <th style="width: 160px;" data-i18n="thOpeningAmt">Opening Balance Amount<br><small>المبلغ المتبقي</small></th>
+                  <th style="width: 90px;" data-i18n="thActions">Actions<br><small>الإجراءات</small></th>
                 </tr>
               </thead>
               <tbody id="openingBalanceTableBody">
@@ -174,8 +183,9 @@
                 <tr>
                   <th data-i18n="thSn">م SN</th>
                   <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
-                  <th data-i18n="thItemDesc">Item Name / Description<br>اسم المنتج / الوصف</th>
-                  <th data-i18n="thOpeningBal">Opening Balance<br>الرصيد الافتتاحي</th>
+                  <th data-i18n="thItemDescEn">Item Name (English)</th>
+                  <th data-i18n="thItemDescAr">Item Name (Arabic)</th>
+                  <th data-i18n="thOpeningBal">Opening Balance</th>
                   <th data-i18n="thIncomingQty">Incoming Qty<br>الكمية الواردة</th>
                   <th data-i18n="thOutgoingQty">Outgoing Qty<br>الكمية الصادرة</th>
                   <th data-i18n="thOutstandingQty">Outstanding Quantity<br>كمية ممتازة</th>
@@ -239,7 +249,7 @@
               <input type="text" id="txCostCentre" class="form-control form-control-sm" data-i18n-placeholder="placeholderOptional" placeholder="Optional">
             </div>
             <div class="col-md-2" id="stationContainer">
-              <label class="form-label small fw-semibold" data-i18n="labelStation">Station / Warehouse / Location (الموقع / المحطة / المستودع)</label>
+              <label class="form-label small fw-semibold" data-i18n="labelStation">Station / Warehouse / Location</label>
               <input type="text" id="txStation" class="form-control form-control-sm" data-i18n-placeholder="placeholderOptional" placeholder="Optional">
             </div>
             <div class="col-md-2">
@@ -261,7 +271,8 @@
                 <tr>
                   <th data-i18n="thSn">SN</th>
                   <th data-i18n="thItemCode">Item Code<br>رمز الصنف</th>
-                  <th data-i18n="thItemDesc">Item Name / Description<br>اسم المنتج / الوصف</th>
+                  <th data-i18n="thItemDescEn">Item Name (English)</th>
+                  <th data-i18n="thItemDescAr">Item Name (Arabic)</th>
                   <th data-i18n="thOpeningBal">Opening Balance</th>
                   <th data-i18n="thOpeningAmt">Opening Amount</th>
                   <th data-i18n="thDate">Date<br>تاريخ</th>
@@ -315,8 +326,12 @@
               <input type="text" id="newCode" class="form-control" required>
             </div>
             <div class="mb-3">
-              <label class="form-label fw-semibold" data-i18n="labelModalDesc">Item Description (اسم المنتج / الوصف)</label>
-              <input type="text" id="newDesc" class="form-control" required>
+              <label class="form-label fw-semibold" data-i18n="labelModalDescEn">Item Description (English)</label>
+              <input type="text" id="newDescEn" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold" data-i18n="labelModalDescAr">Item Description (Arabic / عربي)</label>
+              <input type="text" id="newDescAr" class="form-control">
             </div>
             <div class="mb-3">
               <label class="form-label fw-semibold" data-i18n="labelModalQty">Opening Balance (الرصيد الافتتاحي)</label>
@@ -342,12 +357,14 @@
       en: {
         bannerQtyText: "Total Outstanding Quantity",
         bannerAmtText: "Total Outstanding Amount",
+        bannerOpenQtyText: "Total Opening Balance Quantity",
+        bannerOpenAmtText: "Total Opening Balance Amount",
         subHeader: "Main Warehouse / Southern Warehouse Stock Sheet",
         staffClerk: "Staff Clerk",
         masterMonthLabel: "📅 Master Active Month Selector:",
-        masterMonthHint: "(Calculated strictly based on movement dates)",
+        masterMonthHint: "(Strictly calculated by movement dates)",
         uploadOpenBtn: "Upload Opening Balances",
-        downloadReportBtn: "Download Stock Report",
+        downloadReportDropdown: "Download Reports",
         downloadTemplateBtn: "Download Template",
         tab1: "1. Opening Balance (الرصيد الافتتاحي)",
         tab2: "2. Item Index (سجل الأصناف)",
@@ -358,7 +375,8 @@
         addItemBtn: "+ Add New Item",
         thSn: "م SN",
         thItemCode: "Item Code\nرمز الصنف",
-        thItemDesc: "Item Name / Description\nاسم المنتج / الوصف",
+        thItemDescEn: "Item Name (English)\nاسم الصنف (إنجليزي)",
+        thItemDescAr: "Item Name (Arabic)\nاسم الصنف (عربي)",
         thOpeningBal: "Opening Balance\nالرصيد الافتتاحي",
         thOpeningAmt: "Opening Amount\nالمبلغ المتبقي",
         thActions: "Actions\nالإجراءات",
@@ -387,7 +405,7 @@
         labelInvoice: "Total Invoice (SAR) *",
         labelCostCentre: "Cost Centre (مركز تكلفة)",
         placeholderOptional: "Optional",
-        labelStation: "Station / Warehouse / Location (الموقع / المحطة / المستودع)",
+        labelStation: "Station / Warehouse / Location",
         labelDate: "Date (YYYY-MM-DD)",
         labelRemarks: "Remarks (ملاحظات)",
         placeholderNotes: "Optional notes",
@@ -396,7 +414,8 @@
         analyticsTitle: "📈 Top 20 Outgoing Items Contribution Ratios",
         modalTitle: "Add New Inventory Item",
         labelModalCode: "Item Code (رمز الصنف)",
-        labelModalDesc: "Item Description (اسم المنتج / الوصف)",
+        labelModalDescEn: "Item Description (English)",
+        labelModalDescAr: "Item Description (Arabic / عربي)",
         labelModalQty: "Opening Balance (الرصيد الافتتاحي)",
         labelModalAmt: "Opening Amount (المبلغ الافتتاحي)",
         saveItemBtn: "Save Item",
@@ -406,14 +425,16 @@
       },
       ar: {
         bannerQtyText: "إجمالي الكمية المتبقية",
-        bannerAmtText: "إجمالي المبلغ المتبقي",
+        bannerAmtText: "إجمالي المبلغ المستحق",
+        bannerOpenQtyText: "إجمالي كمية الرصيد الافتتاحي",
+        bannerOpenAmtText: "إجمالي مبلغ الرصيد الافتتاحي",
         subHeader: "ورقة مخزون المستودع الرئيسي / المستودع الجنوبي",
         staffClerk: "موظف مبيعات",
         masterMonthLabel: "📅 محدد الشهر النشط الرئيسي:",
-        masterMonthHint: "(يتم الحساب بدقة بناءً على تواريخ حركات المخزون)",
+        masterMonthHint: "(يتم الحساب بناءً على تواريخ حركات المخزون)",
         uploadOpenBtn: "رفع الأرصدة الافتتاحية",
-        downloadReportBtn: "تحميل تقرير المخزون",
-        downloadTemplateBtn: "تحميل قالب الرفع",
+        downloadReportDropdown: "تحميل التقارير",
+        downloadTemplateBtn: "تحميل القالب",
         tab1: "1. الرصيد الافتتاحي (Opening Balance)",
         tab2: "2. سجل الأصناف (Item Index)",
         tab3: "3. حركة الأصناف (Transactions / Item Card)",
@@ -423,7 +444,8 @@
         addItemBtn: "+ إضافة صنف جديد",
         thSn: "م SN",
         thItemCode: "رمز الصنف\nItem Code",
-        thItemDesc: "اسم المنتج / الوصف\nItem Name / Description",
+        thItemDescEn: "اسم الصنف (إنجليزي)\nItem Name (English)",
+        thItemDescAr: "اسم الصنف (عربي)\nItem Name (Arabic)",
         thOpeningBal: "الرصيد الافتتاحي\nOpening Balance",
         thOpeningAmt: "المبلغ المتبقي\nOpening Amount",
         thActions: "الإجراءات\nActions",
@@ -452,7 +474,7 @@
         labelInvoice: "إجمالي الفاتورة (ريال) *",
         labelCostCentre: "مركز تكلفة (Cost Centre)",
         placeholderOptional: "اختياري",
-        labelStation: "الموقع / المحطة / المستودع (Station / Warehouse / Location)",
+        labelStation: "الموقع / المحطة / المستودع",
         labelDate: "التاريخ (YYYY-MM-DD)",
         labelRemarks: "ملاحظات (Remarks)",
         placeholderNotes: "ملاحظات اختياريّة",
@@ -461,7 +483,8 @@
         analyticsTitle: "📈 نسب مساهمة أعلى 20 صنفاً صادراً",
         modalTitle: "إضافة صنف مخزون جديد",
         labelModalCode: "رمز الصنف (Item Code)",
-        labelModalDesc: "وصف المنتج (Item Description)",
+        labelModalDescEn: "وصف الصنف (إنجليزي - English Description)",
+        labelModalDescAr: "وصف الصنف (عربي - Arabic Description)",
         labelModalQty: "الرصيد الافتتاحي (Opening Balance)",
         labelModalAmt: "المبلغ الافتتاحي (Opening Amount)",
         saveItemBtn: "حفظ الصنف",
@@ -472,6 +495,7 @@
     };
 
     let currentLang = 'en';
+    let activeTabName = 'opening'; // tracks active panel for banner totals
 
     function changeLanguage(lang) {
       currentLang = lang;
@@ -501,16 +525,17 @@
       renderAll();
     }
 
+    // Inventory Catalog with separate descEn and descAr
     let inventoryCatalog = [
-      { id: 1, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
-      { id: 2, code: "749", desc: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
-      { id: 3, code: "7272450", desc: "LetterHead (Noor)", openQty: 39500, openAmt: 3160.00 },
-      { id: 4, code: "750", desc: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00 },
-      { id: 5, code: "401", desc: "زيت منظف", openQty: 20904, openAmt: 73301.99 }
+      { id: 1, code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
+      { id: 2, code: "749", descEn: "Stickers 95 Noor Khawi", descAr: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
+      { id: 3, code: "7272450", descEn: "LetterHead (Noor)", descAr: "ترويسة خطاب (النور)", openQty: 39500, openAmt: 3160.00 },
+      { id: 4, code: "750", descEn: "Stickers Diesel Noor Khawi", descAr: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00 },
+      { id: 5, code: "401", descEn: "Cleaning Oil", descAr: "زيت منظف", openQty: 20904, openAmt: 73301.99 }
     ];
 
     let transactions = [
-      { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
+      { id: 101, code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
     ];
 
     let explicitOpenBalances = {}; 
@@ -528,13 +553,8 @@
     }
 
     function switchTab(tabName) {
-      if (tabName === 'index') {
-        renderItemIndexTable();
-      } else if (tabName === 'opening') {
-        renderOpeningBalanceTable();
-      } else if (tabName === 'transactions') {
-        renderTransactionTable();
-      }
+      activeTabName = tabName;
+      renderAll();
     }
 
     function openAddModal() {
@@ -578,6 +598,7 @@
 
     function goToItemIndex(code) {
       currentIndexFilterCode = code;
+      activeTabName = 'index';
       const triggerEl = document.querySelector('#index-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
@@ -599,6 +620,7 @@
 
     function goToTransactions(code) {
       currentTxFilterCode = code;
+      activeTabName = 'transactions';
       const triggerEl = document.querySelector('#tx-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
@@ -619,7 +641,7 @@
       if (!query) {
         currentTxFilterCode = null;
       } else {
-        const matched = inventoryCatalog.find(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
+        const matched = inventoryCatalog.find(i => i.code.toLowerCase().includes(query) || i.descEn.toLowerCase().includes(query) || i.descAr.toLowerCase().includes(query));
         if (matched) {
           currentTxFilterCode = matched.code;
           document.getElementById('txItemCode').value = matched.code;
@@ -633,7 +655,7 @@
 
     function onItemCodeTyped(val) {
       const query = val.trim().toLowerCase();
-      const matched = inventoryCatalog.find(i => i.code.toLowerCase() === query || i.desc.toLowerCase() === query);
+      const matched = inventoryCatalog.find(i => i.code.toLowerCase() === query || i.descEn.toLowerCase().includes(query) || i.descAr.toLowerCase().includes(query));
       if (matched) {
         currentTxFilterCode = matched.code;
         document.getElementById('txSearchInput').value = matched.code;
@@ -653,7 +675,8 @@
       const datalist = document.getElementById('inventoryListOptions');
       datalist.innerHTML = '';
       inventoryCatalog.forEach(item => {
-        datalist.innerHTML += `<option value="${item.code}">${item.code} - ${item.desc}</option>`;
+        const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
+        datalist.innerHTML += `<option value="${item.code}">${item.code} - ${displayName}</option>`;
       });
     }
 
@@ -667,13 +690,11 @@
       return false;
     }
 
-    // STRICT MOVEMENT-DATE BASED ROLLOVER CALCULATION
     function calculateBalanceUpToDate(itemCode, upToDateStr) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       let qty = item ? parseFloat(item.openQty) || 0 : 0;
       let amt = item ? parseFloat(item.openAmt) || 0 : 0;
 
-      // Sort all transactions chronologically by movement date (tx.date)
       const sortedTxs = [...transactions]
         .filter(tx => tx.code === itemCode && tx.date <= upToDateStr)
         .sort((a, b) => a.date.localeCompare(b.date));
@@ -714,12 +735,10 @@
         };
       }
       
-      // Calculate precise ending balance of the previous month based on movement dates (e.g. up to last day of prev month)
       let prevMonthStr = '2026-09';
       if (targetMonth === '2026-11') prevMonthStr = '2026-10';
       if (targetMonth === '2026-12') prevMonthStr = '2026-11';
       
-      // Get last date of previous month (e.g. '2026-10-31')
       const [year, month] = prevMonthStr.split('-');
       const lastDayDate = new Date(year, month, 0).toISOString().split('T')[0];
 
@@ -750,16 +769,12 @@
       let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
 
-      // Total movement up to selected month or all transactions
       let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
       
-      // Calculate based on movement date up to end of selected month if specific month
       let outstandingQty = openQty + inQty;
-      let totalAmount = openAmt + filteredTxs.filter(tx => tx.inQty > 0 && tx.invoiceAmt).reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
 
       if (selectedMonth !== 'ALL') {
-        // Evaluate chronological balance up to end of selected month using movement dates
         const [y, m] = selectedMonth.split('-');
         const endOfMonthDate = new Date(y, m, 0).toISOString().split('T')[0];
         const upToDateStats = calculateBalanceUpToDate(itemCode, endOfMonthDate);
@@ -770,7 +785,6 @@
         return { openQty, inQty, outQty, outstandingQty, outstandingAmt: upToDateAmt, avgPrice, qtyDiff };
       }
       
-      const outstandingAmt = openQty + totalIn - totalOut > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) : 0;
       const avgPrice = (openQty + totalIn) > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + totalIn) : 0;
       const finalOutstandingQty = openQty + totalIn - totalOut;
       const finalOutstandingAmt = finalOutstandingQty * avgPrice;
@@ -794,13 +808,33 @@
 
       let totalQty = 0;
       let totalAmt = 0;
-      inventoryCatalog.forEach(item => {
-        const stats = getItemStats(item.code, selectedMonth);
-        if (stats.outstandingQty !== null) {
-          totalQty += stats.outstandingQty;
-          totalAmt += stats.outstandingAmt;
-        }
-      });
+
+      if (activeTabName === 'opening') {
+        // Banner shows opening balance totals for Opening Balance panel
+        document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerOpenQtyText;
+        document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerOpenAmtText;
+
+        inventoryCatalog.forEach(item => {
+          const rollover = getRolloverStats(item.code, selectedMonth);
+          if (rollover.openQty !== null) {
+            totalQty += rollover.openQty;
+            totalAmt += rollover.openAmt;
+          }
+        });
+      } else {
+        // Banner shows outstanding totals for Item Index & Transactions panels
+        document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerQtyText;
+        document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerAmtText;
+
+        inventoryCatalog.forEach(item => {
+          const stats = getItemStats(item.code, selectedMonth);
+          if (stats.outstandingQty !== null) {
+            totalQty += stats.outstandingQty;
+            totalAmt += stats.outstandingAmt;
+          }
+        });
+      }
+
       document.getElementById('bannerQty').innerText = totalQty.toLocaleString(undefined, {minimumFractionDigits: 2});
       document.getElementById('bannerAmt').innerText = totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
     }
@@ -821,7 +855,7 @@
       const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
 
       const filtered = inventoryCatalog.filter(item => 
-        item.code.toLowerCase().includes(searchQuery) || item.desc.toLowerCase().includes(searchQuery)
+        item.code.toLowerCase().includes(searchQuery) || item.descEn.toLowerCase().includes(searchQuery) || item.descAr.toLowerCase().includes(searchQuery)
       );
 
       const paginated = filtered.slice(0, pageSize);
@@ -834,7 +868,8 @@
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
           <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
-          <td class="fw-semibold">${item.desc}</td>
+          <td class="fw-semibold">${item.descEn || '-'}</td>
+          <td class="fw-semibold">${item.descAr || '-'}</td>
           <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-center">
@@ -843,6 +878,7 @@
         `;
         tbody.appendChild(tr);
       });
+      updateBannerTotals();
     }
 
     function renderItemIndexTable() {
@@ -858,7 +894,7 @@
       let catalogToRender = [...inventoryCatalog];
       if (currentIndexFilterCode) {
         const query = currentIndexFilterCode.toLowerCase();
-        catalogToRender = catalogToRender.filter(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
+        catalogToRender = catalogToRender.filter(i => i.code.toLowerCase().includes(query) || i.descEn.toLowerCase().includes(query) || i.descAr.toLowerCase().includes(query));
       }
 
       catalogToRender.forEach((item, index) => {
@@ -869,7 +905,8 @@
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
           <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
-          <td class="fw-semibold">${item.desc}</td>
+          <td class="fw-semibold">${item.descEn || '-'}</td>
+          <td class="fw-semibold">${item.descAr || '-'}</td>
           <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end text-success fw-bold">${stats.inQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
           <td class="text-end text-danger fw-bold">${stats.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -900,7 +937,7 @@
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
       if (currentTxFilterCode) {
-        sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentTxFilterCode.toLowerCase() || i.desc.toLowerCase().includes(currentTxFilterCode.toLowerCase()));
+        sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentTxFilterCode.toLowerCase() || i.descEn.toLowerCase().includes(currentTxFilterCode.toLowerCase()) || i.descAr.toLowerCase().includes(currentTxFilterCode.toLowerCase()));
       }
 
       let globalSn = 1;
@@ -923,7 +960,8 @@
           <tr class="table-secondary">
             <td class="text-center fw-bold">${globalSn++}</td>
             <td class="text-center"><span class="badge bg-dark">${item.code}</span></td>
-            <td class="fw-semibold">${item.desc} (${selectedMonth === 'ALL' ? 'Opening Balance' : 'Beginning of ' + selectedMonth})</td>
+            <td class="fw-semibold">${item.descEn || '-'}</td>
+            <td class="fw-semibold">${item.descAr || '-'}</td>
             <td class="text-end">${openQ.toLocaleString()}</td>
             <td class="text-end">SAR ${openA.toLocaleString()}</td>
             <td>${selectedMonth === 'ALL' ? '2026-10-01' : selectedMonth + '-01'}</td>
@@ -941,7 +979,6 @@
           let runningQty = openQ;
           let runningAmt = openA;
 
-          // Sort transactions by movement date chronologically
           const chronologicalTxs = [...itemTxs].sort((a, b) => a.date.localeCompare(b.date));
 
           chronologicalTxs.forEach((tx) => {
@@ -965,7 +1002,8 @@
               <tr>
                 <td class="text-center fw-bold">${globalSn++}</td>
                 <td class="text-center"><span class="badge bg-light text-dark border">${tx.code}</span></td>
-                <td class="fw-semibold">${item.desc}</td>
+                <td class="fw-semibold">${item.descEn || '-'}</td>
+                <td class="fw-semibold">${item.descAr || '-'}</td>
                 <td class="text-end">${openQ.toLocaleString()}</td>
                 <td class="text-end">SAR ${openA.toLocaleString()}</td>
                 <td>${tx.date}</td>
@@ -984,6 +1022,7 @@
           });
         }
       });
+      updateBannerTotals();
     }
 
     function editTransaction(id) {
@@ -1002,6 +1041,7 @@
       document.getElementById('txSubmitBtn').innerText = translations[currentLang].updateEntryBtn;
       
       toggleMovementFields();
+      activeTabName = 'transactions';
       const triggerEl = document.querySelector('#tx-tab');
       new bootstrap.Tab(triggerEl).show();
     }
@@ -1009,13 +1049,23 @@
     function addNewItem(e) {
       e.preventDefault();
       const code = document.getElementById('newCode').value;
-      const desc = document.getElementById('newDesc').value;
+      let descEn = document.getElementById('newDescEn').value.trim();
+      let descAr = document.getElementById('newDescAr').value.trim();
+      
+      // Dual Name Logic: If one is provided and other is empty, copy it
+      if (descEn && !descAr) descAr = descEn;
+      if (descAr && !descEn) descEn = descAr;
+
       const openQty = parseFloat(document.getElementById('newOpenQty').value) || 0;
       const openAmt = parseFloat(document.getElementById('newOpenAmt').value) || 0;
       const masterMonth = document.getElementById('masterMonthSelect').value;
 
-      if (!inventoryCatalog.some(i => i.code === code)) {
-        inventoryCatalog.push({ code, desc, openQty: 0, openAmt: 0 });
+      let existing = inventoryCatalog.find(i => i.code === code);
+      if (!existing) {
+        inventoryCatalog.push({ code, descEn, descAr, openQty: 0, openAmt: 0 });
+      } else {
+        if (descEn) existing.descEn = descEn;
+        if (descAr) existing.descAr = descAr;
       }
 
       if (masterMonth !== 'ALL') {
@@ -1048,15 +1098,18 @@
         lines.forEach((line, idx) => {
           if (idx === 0) return;
           const parts = line.split(',');
-          if (parts.length >= 4) {
+          if (parts.length >= 5) {
             const code = parts[0].trim();
-            const desc = parts[1].trim();
-            const openQty = parseFloat(parts[2]) || 0;
-            const openAmt = parseFloat(parts[3]) || 0;
+            let descEn = parts[1].trim();
+            let descAr = parts[2].trim();
+            if (descEn && !descAr) descAr = descEn;
+            if (descAr && !descEn) descEn = descAr;
+            const openQty = parseFloat(parts[3]) || 0;
+            const openAmt = parseFloat(parts[4]) || 0;
             
             if (code) {
               if (!inventoryCatalog.some(i => i.code === code)) {
-                inventoryCatalog.push({ code, desc, openQty: 0, openAmt: 0 });
+                inventoryCatalog.push({ code, descEn, descAr, openQty: 0, openAmt: 0 });
               }
               explicitOpenBalances[uploadMonth][code] = { openQty, openAmt };
               count++;
@@ -1067,7 +1120,7 @@
         renderAll();
         alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح لشهر ${uploadMonth}!` : `Successfully imported ${count} opening balances for ${uploadMonth}!`);
       };
-      reader.readAsText(file);
+      reader.readAsText(file, 'UTF-8');
     }
 
     function submitTransaction(e) {
@@ -1100,7 +1153,8 @@
           transactions[txIndex] = {
             id: parseInt(editId),
             code: code,
-            desc: found.desc,
+            descEn: found.descEn,
+            descAr: found.descAr,
             date: dateStr,
             voucher: voucher,
             inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
@@ -1118,7 +1172,8 @@
         const newTx = {
           id: Date.now(),
           code: code,
-          desc: found.desc,
+          descEn: found.descEn,
+          descAr: found.descAr,
           date: dateStr,
           voucher: voucher,
           inQty: (type === 'INBOUND' || type === 'RETURN') ? qty : 0,
@@ -1138,33 +1193,91 @@
       alert(currentLang === 'ar' ? 'تم تسجيل وتحديث الحركة بنجاح!' : 'Transaction successfully recorded and updated!');
     }
 
-    function downloadCurrentStockReport() {
+    // 1. Stock Movement Report (Summary Report)
+    function downloadStockMovementReport() {
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
       
-      let csvContent = "data:text/csv;charset=utf-8,SN,Item Code,Item Description,Opening Balance,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price\n";
+      let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Opening Balance,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price\n";
       
       inventoryCatalog.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
         if (stats.outstandingQty !== null) {
-          csvContent += `${index + 1},${item.code},"${item.desc}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
+          csvContent += `${index + 1},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${stats.openQty},${stats.inQty},${stats.outQty},${stats.outstandingQty},${stats.outstandingAmt.toFixed(2)},${stats.avgPrice.toFixed(2)}\n`;
         }
       });
 
-      const encodedUri = encodeURI(csvContent);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `Current_Stock_Report_${selectedMonth}.csv`);
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Stock_Movement_Summary_${selectedMonth}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // 2. Stock Ledger Report (Item by item transactional movement report by date)
+    function downloadStockLedgerReport() {
+      const masterSelect = document.getElementById('masterMonthSelect');
+      const selectedMonth = masterSelect ? masterSelect.value : '2026-10';
+
+      let csvContent = "\ufeffSN,Item Code,Item Name (English),Item Name (Arabic),Date,Voucher No,Movement Type,Incoming Qty,Outgoing Qty,Outstanding Qty,Outstanding Amount,Average Price,Location/Station,Remarks\n";
+      
+      let globalSn = 1;
+      inventoryCatalog.forEach(item => {
+        const rollover = getRolloverStats(item.code, selectedMonth);
+        if (rollover.openQty === null) return;
+
+        const itemTxs = transactions.filter(tx => {
+          if (tx.code !== item.code) return false;
+          if (selectedMonth !== 'ALL' && !tx.date.startsWith(selectedMonth)) return false;
+          return true;
+        }).sort((a, b) => a.date.localeCompare(b.date));
+
+        const openQ = rollover.openQty;
+        const openA = rollover.openAmt;
+
+        // Opening row
+        csvContent += `${globalSn++},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${selectedMonth === 'ALL' ? '2026-10-01' : selectedMonth + '-01'},OPENING,OPENING,0,0,${openQ},${openA.toFixed(2)},${openQ > 0 ? (openA/openQ).toFixed(2) : 0},"Main WH","Opening Balance"\n`;
+
+        let runningQty = openQ;
+        let runningAmt = openA;
+
+        itemTxs.forEach(tx => {
+          let inQ = tx.inQty || 0;
+          let outQ = tx.outQty || 0;
+          let mType = inQ > 0 ? 'INBOUND' : (outQ > 0 ? 'OUTGOING' : 'MOVEMENT');
+
+          if (inQ > 0) {
+            runningQty += inQ;
+            runningAmt += tx.invoiceAmt || 0;
+          }
+          if (outQ > 0) {
+            let avgP = runningQty > 0 ? runningAmt / runningQty : 0;
+            runningQty -= outQ;
+            runningAmt -= outQ * avgP;
+          }
+          let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
+          let loc = tx.station || tx.costCentre || '-';
+
+          csvContent += `${globalSn++},${item.code},"${item.descEn || ''}","${item.descAr || ''}",${tx.date},${tx.voucher},${mType},${inQ},${outQ},${runningQty},${runningAmt.toFixed(2)},${currentAvg.toFixed(2)},"${loc}","${tx.remarks || ''}"\n`;
+        });
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute("download", `Stock_Ledger_Report_${selectedMonth}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
 
     function downloadUploadTemplate() {
-      const csvContent = "data:text/csv;charset=utf-8,Item Code,Item Description,Opening Balance Quantity,Opening Balance Amount\n763225,برغى جبس اسود خشن 3/4*7,42000,1207.50\n749,استيكرات 95 نور خوي,40000,0.00";
-      const encodedUri = encodeURI(csvContent);
+      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00";
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
+      link.href = URL.createObjectURL(blob);
       link.setAttribute("download", "Inventory_Upload_Template.csv");
       document.body.appendChild(link);
       link.click();
@@ -1178,7 +1291,8 @@
           const stats = getItemStats(item.code, 'ALL');
           const totalIn = stats.openQty + stats.inQty;
           const ratio = totalIn > 0 ? ((stats.outQty / totalIn) * 100).toFixed(1) : 0;
-          return { desc: item.desc, ratio: parseFloat(ratio) };
+          const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
+          return { desc: displayName, ratio: parseFloat(ratio) };
         })
         .sort((a, b) => b.ratio - a.ratio)
         .slice(0, 20);
