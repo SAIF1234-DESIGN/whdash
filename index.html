@@ -138,10 +138,12 @@
       <!-- TAB 2: ITEM INDEX -->
       <div class="tab-pane fade" id="tabItemIndex" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold text-primary mb-3">📊 Master Item Index & Outstanding Stock Sheet</h5>
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h5 class="fw-bold text-primary mb-0">📊 Master Item Index & Outstanding Stock Sheet</h5>
             <div class="d-flex align-items-center gap-2">
-              <label class="form-label small fw-semibold mb-0">Select Month:</label>
+              <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetIndexFilter()">Show All Inventory</button>
+              <input type="text" id="indexSearchInput" class="form-control form-control-sm" list="inventoryListOptions" placeholder="🔍 Search code or name..." oninput="filterIndexBySearch(this.value)" style="width: 240px;">
+              <label class="form-label small fw-semibold mb-0 ms-2">Month:</label>
               <select id="indexMonthSelect" class="form-select form-select-sm" onchange="renderItemIndexTable()" style="width: 140px;">
                 <option value="2026-10" selected>October 2026</option>
                 <option value="2026-11">November 2026</option>
@@ -327,7 +329,8 @@
       { id: 101, code: "763225", desc: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", remarks: "Opening" }
     ];
 
-    let currentFilterCode = null;
+    let currentTxFilterCode = null;
+    let currentIndexFilterCode = null;
     let chartInstance = null;
 
     function initDashboard() {
@@ -366,14 +369,32 @@
     }
 
     function goToItemIndex(code) {
+      currentIndexFilterCode = code;
       const triggerEl = document.querySelector('#index-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
+      document.getElementById('indexSearchInput').value = code;
+      renderItemIndexTable();
+    }
+
+    function resetIndexFilter() {
+      currentIndexFilterCode = null;
+      document.getElementById('indexSearchInput').value = "";
+      renderItemIndexTable();
+    }
+
+    function filterIndexBySearch(val) {
+      const query = val.trim().toLowerCase();
+      if (!query) {
+        currentIndexFilterCode = null;
+      } else {
+        currentIndexFilterCode = query;
+      }
       renderItemIndexTable();
     }
 
     function goToTransactions(code) {
-      currentFilterCode = code;
+      currentTxFilterCode = code;
       const triggerEl = document.querySelector('#tx-tab');
       const tab = new bootstrap.Tab(triggerEl);
       tab.show();
@@ -383,7 +404,7 @@
     }
 
     function resetTxFilter() {
-      currentFilterCode = null;
+      currentTxFilterCode = null;
       document.getElementById('txSearchInput').value = "";
       document.getElementById('txItemCode').value = "";
       renderTransactionTable();
@@ -392,14 +413,14 @@
     function filterTransactionsBySearch(val) {
       const query = val.trim().toLowerCase();
       if (!query) {
-        currentFilterCode = null;
+        currentTxFilterCode = null;
       } else {
         const matched = inventoryCatalog.find(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
         if (matched) {
-          currentFilterCode = matched.code;
+          currentTxFilterCode = matched.code;
           document.getElementById('txItemCode').value = matched.code;
         } else {
-          currentFilterCode = query;
+          currentTxFilterCode = query;
           document.getElementById('txItemCode').value = query;
         }
       }
@@ -410,7 +431,7 @@
       const query = val.trim().toLowerCase();
       const matched = inventoryCatalog.find(i => i.code.toLowerCase() === query || i.desc.toLowerCase() === query);
       if (matched) {
-        currentFilterCode = matched.code;
+        currentTxFilterCode = matched.code;
         document.getElementById('txSearchInput').value = matched.code;
         renderTransactionTable();
       }
@@ -441,7 +462,6 @@
         };
       }
       
-      // Calculate previous month ending balance for rolling over
       let prevMonthStr = '2026-10';
       if (targetMonth === '2026-12') prevMonthStr = '2026-11';
       
@@ -466,7 +486,6 @@
       let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
 
-      // YTD movements for outstanding calculation
       let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
       
@@ -530,7 +549,13 @@
       tbody.innerHTML = '';
       const selectedMonth = document.getElementById('indexMonthSelect').value;
 
-      inventoryCatalog.forEach((item, index) => {
+      let catalogToRender = [...inventoryCatalog];
+      if (currentIndexFilterCode) {
+        const query = currentIndexFilterCode.toLowerCase();
+        catalogToRender = catalogToRender.filter(i => i.code.toLowerCase().includes(query) || i.desc.toLowerCase().includes(query));
+      }
+
+      catalogToRender.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
 
         const tr = document.createElement('tr');
@@ -560,12 +585,12 @@
       
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
-      if (currentFilterCode) {
-        sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentFilterCode.toLowerCase() || i.desc.toLowerCase().includes(currentFilterCode.toLowerCase()));
+      if (currentTxFilterCode) {
+        sortedCatalog = sortedCatalog.filter(i => i.code.toLowerCase() === currentTxFilterCode.toLowerCase() || i.desc.toLowerCase().includes(currentTxFilterCode.toLowerCase()));
       }
 
       let globalSn = 1;
-      const today = new Date('2026-10-29'); // Simulated current date
+      const today = new Date('2026-10-29');
 
       sortedCatalog.forEach(item => {
         const itemTxs = transactions.filter(tx => tx.code === item.code);
@@ -606,7 +631,6 @@
             }
             let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
 
-            // 3-Day Edit Rule Check
             const txDate = new Date(tx.date);
             const diffDays = (today - txDate) / (1000 * 60 * 60 * 24);
             const canEdit = diffDays <= 3;
@@ -719,7 +743,6 @@
       }
 
       if (editId) {
-        // Update existing transaction
         const txIndex = transactions.findIndex(t => t.id == editId);
         if (txIndex !== -1) {
           transactions[txIndex] = {
