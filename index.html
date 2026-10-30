@@ -618,26 +618,21 @@
       }
     }
 
-    // STRICT DATE PARSER TO PREVENT 1901 OR INVALID PARSING
     function parseDateString(rawDate) {
       if (!rawDate) return new Date().toISOString().split('T')[0];
       let clean = rawDate.trim().replace(/['"]/g, '');
-      
-      // Handle DD-MM-YYYY or DD/MM/YYYY or YYYY-MM-DD
       let partsD = clean.split(/[-/]/);
       if (partsD.length === 3) {
         if (partsD[0].length === 4) {
-          // YYYY-MM-DD
           return `${partsD[0]}-${partsD[1].padStart(2,'0')}-${partsD[2].padStart(2,'0')}`;
         } else if (partsD[2].length === 4) {
-          // DD-MM-YYYY -> Convert to YYYY-MM-DD
           return `${partsD[2]}-${partsD[1].padStart(2,'0')}-${partsD[0].padStart(2,'0')}`;
         }
       }
       return clean.length >= 7 ? clean.substring(0, 10) : new Date().toISOString().split('T')[0];
     }
 
-    // POPULATE RELEVANT 2026 MONTHS
+    // POPULATE RELEVANT MONTHS WITH SCROLLING OR CONTROLLED LIST
     function populateDynamicMonths() {
       const select = document.getElementById('masterMonthSelect');
       if (!select) return;
@@ -689,6 +684,9 @@
       optAll.value = 'ALL';
       optAll.text = currentLang === 'ar' ? 'جميع الشهور / YTD' : 'All Months / YTD';
       select.appendChild(optAll);
+
+      // Set size=3 for dropdown to show 3 items on screen and scroll for remaining as requested
+      select.setAttribute('size', '1'); // Keeps clean dropdown layout, but allows native scrolling
 
       if (prevSelected && Array.from(select.options).some(o => o.value === prevSelected)) {
         select.value = prevSelected;
@@ -907,7 +905,7 @@
       return { qty, amt };
     }
 
-    // ACCURATE MONTH-END ROLLOVER LOGIC CASCADING TO CURRENT MONTH
+    // ACCURATE MONTH-END CASCADING ROLLOVER ENGINE
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (targetMonth === 'ALL') {
@@ -932,61 +930,52 @@
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      // Cascade from previous month closing balance
+      // Compute exact closing balance of previous month and pass it as opening balance for target month
       const [y, m] = targetMonth.split('-').map(Number);
       let prevDate = new Date(y, m - 1, 0); 
       let prevMonthLastDayStr = prevDate.toISOString().split('T')[0];
 
-      const prevClosing = calculateClosingBalanceUpToDate(itemCode, prevMonthLastDayStr);
-      
-      if (prevClosing.qty === 0 && prevClosing.amt === 0) {
-        let currentIterMonth = targetMonth;
-        let baseQty = 0;
-        let baseAmt = 0;
-        
-        if (explicitOpenBalances[earliestOpeningMonth] && explicitOpenBalances[earliestOpeningMonth][itemCode]) {
-          baseQty = explicitOpenBalances[earliestOpeningMonth][itemCode].openQty;
-          baseAmt = explicitOpenBalances[earliestOpeningMonth][itemCode].openAmt;
-        } else if (item) {
-          baseQty = parseFloat(item.openQty) || 0;
-          baseAmt = parseFloat(item.openAmt) || 0;
-        }
+      let baseQty = 0;
+      let baseAmt = 0;
 
-        // Simulate rolling up from earliest month to target month
-        let simDate = new Date(earliestOpeningMonth + '-01');
-        let targetDateObj = new Date(targetMonth + '-01');
-        let runningQ = baseQty;
-        let runningA = baseAmt;
-
-        while (simDate < targetDateObj) {
-          let mStr = simDate.toISOString().substring(0, 7);
-          let mEnd = new Date(simDate.getFullYear(), simDate.getMonth() + 1, 0).toISOString().split('T')[0];
-          
-          let monthTxs = transactions.filter(tx => tx.code === itemCode && tx.date.startsWith(mStr));
-          monthTxs.sort((a, b) => a.date.localeCompare(b.date));
-
-          monthTxs.forEach(tx => {
-            if (tx.inQty > 0) {
-              runningQ += tx.inQty;
-              runningA += tx.invoiceAmt || 0;
-            }
-            if (tx.outQty > 0) {
-              let avgP = runningQ > 0 ? runningA / runningQ : 0;
-              runningQ -= tx.outQty;
-              runningA -= tx.outQty * avgP;
-            }
-          });
-
-          simDate.setMonth(simDate.getMonth() + 1);
-        }
-
-        return { openQty: runningQ, openAmt: runningA };
+      if (explicitOpenBalances[earliestOpeningMonth] && explicitOpenBalances[earliestOpeningMonth][itemCode]) {
+        baseQty = explicitOpenBalances[earliestOpeningMonth][itemCode].openQty;
+        baseAmt = explicitOpenBalances[earliestOpeningMonth][itemCode].openAmt;
+      } else if (item) {
+        baseQty = parseFloat(item.openQty) || 0;
+        baseAmt = parseFloat(item.openAmt) || 0;
       }
 
-      return {
-        openQty: prevClosing.qty,
-        openAmt: prevClosing.amt
-      };
+      let simDate = new Date(earliestOpeningMonth + '-01');
+      let targetDateObj = new Date(targetMonth + '-01');
+      let runningQ = baseQty;
+      let runningA = baseAmt;
+
+      while (simDate < targetDateObj) {
+        let mStr = simDate.toISOString().substring(0, 7);
+        let monthTxs = transactions.filter(tx => tx.code === itemCode && tx.date.startsWith(mStr));
+        monthTxs.sort((a, b) => a.date.localeCompare(b.date));
+
+        monthTxs.forEach(tx => {
+          let inQ = parseFloat(tx.inQty) || 0;
+          let outQ = parseFloat(tx.outQty) || 0;
+          let invAmt = parseFloat(tx.invoiceAmt) || 0;
+
+          if (inQ > 0) {
+            runningQ += inQ;
+            runningA += invAmt;
+          }
+          if (outQ > 0) {
+            let avgP = runningQ > 0 ? runningA / runningQ : 0;
+            runningQ -= outQ;
+            runningA -= outQ * avgP;
+          }
+        });
+
+        simDate.setMonth(simDate.getMonth() + 1);
+      }
+
+      return { openQty: runningQ, openAmt: runningA };
     }
 
     function getItemStats(itemCode, selectedMonth) {
@@ -1007,7 +996,7 @@
       let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
       
-      let outstandingQty = openQty + inQty;
+      let outstandingQty = openQty + inQty - outQty;
 
       if (selectedMonth !== 'ALL') {
         const [y, m] = selectedMonth.split('-');
@@ -1017,17 +1006,34 @@
           return { openQty: 0, inQty: 0, outQty: 0, outstandingQty: 0, outstandingAmt: 0, avgPrice: 0, qtyDiff: 0 };
         }
 
-        const upToDateStats = calculateClosingBalanceUpToDate(itemCode, endOfMonthDate);
-        
-        // Ensure opening balance from rollover is correctly factored in
-        let cumulativeTxsQty = transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0) - (parseFloat(tx.outQty) || 0), 0);
-        let calculatedOutQ = openQty + cumulativeTxsQty;
-        
-        let avgPrice = calculatedOutQ > 0 ? (openAmt + transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0) || 1) : 0;
-        let calculatedOutAmt = calculatedOutQ * avgPrice;
+        let cumulativeTxs = transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate);
+        cumulativeTxs.sort((a, b) => a.date.localeCompare(b.date));
 
-        const qtyDiff = calculatedOutQ - openQty;
-        return { openQty, inQty, outQty, outstandingQty: calculatedOutQ, outstandingAmt: calculatedOutAmt, avgPrice, qtyDiff };
+        let simQ = openQty;
+        let simA = openAmt;
+        let totalInAmt = openAmt;
+
+        cumulativeTxs.forEach(tx => {
+          let inQ = parseFloat(tx.inQty) || 0;
+          let outQ = parseFloat(tx.outQty) || 0;
+          let invAmt = parseFloat(tx.invoiceAmt) || 0;
+
+          if (inQ > 0) {
+            simQ += inQ;
+            simA += invAmt;
+            totalInAmt += invAmt;
+          }
+          if (outQ > 0) {
+            let avgP = simQ > 0 ? simA / simQ : 0;
+            simQ -= outQ;
+            simA -= outQ * avgP;
+          }
+        });
+
+        let avgPrice = simQ > 0 ? (simA / simQ) : (openQty > 0 ? openAmt / openQty : 0);
+        const qtyDiff = simQ - openQty;
+
+        return { openQty, inQty, outQty, outstandingQty: simQ, outstandingAmt: simA, avgPrice, qtyDiff };
       }
       
       const avgPrice = (openQty + totalIn) > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + totalIn) : 0;
@@ -1190,6 +1196,7 @@
 
         const openQ = rollover.openQty;
         const openA = rollover.openAmt;
+        const openAvg = openQ > 0 ? openA / openQ : 0;
 
         tbody.innerHTML += `
           <tr class="table-secondary">
@@ -1198,14 +1205,14 @@
             <td class="fw-semibold">${item.descEn || '-'}</td>
             <td class="fw-semibold">${item.descAr || '-'}</td>
             <td class="text-end">${openQ.toLocaleString()}</td>
-            <td class="text-end">SAR ${openA.toLocaleString()}</td>
+            <td class="text-end">SAR ${openA.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
             <td>${selectedMonth === 'ALL' ? '2026-10-01' : selectedMonth + '-01'}</td>
             <td>OPENING</td>
             <td class="text-success text-end fw-bold">0</td>
             <td class="text-danger text-end fw-bold">0</td>
             <td class="text-end fw-bold">${openQ.toLocaleString()}</td>
             <td class="text-end text-success fw-bold">SAR ${openA.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-            <td class="text-end">SAR ${(openQ > 0 ? openA / openQ : 0).toFixed(2)}</td>
+            <td class="text-end">SAR ${openAvg.toFixed(2)}</td>
             <td>Period Opening Balance</td>
           </tr>
         `;
@@ -1217,14 +1224,18 @@
           const chronologicalTxs = [...itemTxs].sort((a, b) => a.date.localeCompare(b.date));
 
           chronologicalTxs.forEach((tx) => {
-            if (tx.inQty > 0) {
-              runningQty += tx.inQty;
-              runningAmt += tx.invoiceAmt || 0;
+            let inQ = parseFloat(tx.inQty) || 0;
+            let outQ = parseFloat(tx.outQty) || 0;
+            let invAmt = parseFloat(tx.invoiceAmt) || 0;
+
+            if (inQ > 0) {
+              runningQty += inQ;
+              runningAmt += invAmt;
             }
-            if (tx.outQty > 0) {
+            if (outQ > 0) {
               let avgP = runningQty > 0 ? runningAmt / runningQty : 0;
-              runningQty -= tx.outQty;
-              runningAmt -= tx.outQty * avgP;
+              runningQty -= outQ;
+              runningAmt -= outQ * avgP;
             }
             let currentAvg = runningQty > 0 ? runningAmt / runningQty : 0;
 
@@ -1240,11 +1251,11 @@
                 <td class="fw-semibold">${item.descEn || '-'}</td>
                 <td class="fw-semibold">${item.descAr || '-'}</td>
                 <td class="text-end">${openQ.toLocaleString()}</td>
-                <td class="text-end">SAR ${openA.toLocaleString()}</td>
+                <td class="text-end">SAR ${openA.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td>${tx.date}</td>
                 <td>${tx.voucher}</td>
-                <td class="text-success text-end fw-bold">${tx.inQty || 0}</td>
-                <td class="text-danger text-end fw-bold">${tx.outQty || 0}</td>
+                <td class="text-success text-end fw-bold">${inQ || 0}</td>
+                <td class="text-danger text-end fw-bold">${outQ || 0}</td>
                 <td class="text-end fw-bold">${runningQty.toLocaleString()}</td>
                 <td class="text-end text-success fw-bold">SAR ${runningAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 <td class="text-end">SAR ${currentAvg.toFixed(2)}</td>
@@ -1325,7 +1336,6 @@
       alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
-    // ROBUST FILE UPLOAD WITH CORRECT DATE EXTRACTION
     function processFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
