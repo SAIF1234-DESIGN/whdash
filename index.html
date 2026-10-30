@@ -118,7 +118,7 @@
         </div>
         <div class="d-flex gap-2 align-items-center flex-wrap">
           <label class="btn btn-sm btn-outline-secondary fw-semibold mb-0 cursor-pointer" id="uploadBtnContainer">
-            📂 <span data-i18n="uploadOpenBtn">Upload Opening Balances</span> <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="promptUploadMonth(event)" hidden>
+            📂 <span data-i18n="uploadOpenBtn">Upload Opening Balances</span> <input type="file" id="csvUpload" accept=".csv, .xlsx" onchange="processFileUpload(event)" hidden>
           </label>
           <div class="dropdown">
             <button class="btn btn-sm btn-outline-primary fw-semibold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -701,19 +701,11 @@
       renderAll();
     }
 
-    let inventoryCatalog = [
-      { id: 1, code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
-      { id: 2, code: "749", descEn: "Stickers 95 Noor Khawi", descAr: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 },
-      { id: 3, code: "7272450", descEn: "LetterHead (Noor)", descAr: "ترويسة خطاب (النور)", openQty: 39500, openAmt: 3160.00 },
-      { id: 4, code: "750", descEn: "Stickers Diesel Noor Khawi", descAr: "استيكرات ديزل نور خوي", openQty: 32000, openAmt: 0.00 },
-      { id: 5, code: "401", descEn: "Cleaning Oil", descAr: "زيت منظف", openQty: 20904, openAmt: 73301.99 }
-    ];
+    let inventoryCatalog = [];
+    let transactions = [];
+    let explicitOpenBalances = {}; // Format: { "YYYY-MM": { itemCode: { openQty, openAmt } } }
+    let earliestOpeningMonth = null; // Tracks the absolute first month an opening balance was introduced
 
-    let transactions = [
-      { id: 101, code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", date: "2026-10-01", voucher: "V-101", inQty: 0, outQty: 0, costCentre: "Main WH", station: "", remarks: "Opening" }
-    ];
-
-    let explicitOpenBalances = {}; 
     let currentTxFilterCode = null;
     let currentIndexFilterCode = null;
     let chartInstance = null;
@@ -728,7 +720,6 @@
     }
 
     function openAddModal() {
-      const masterMonth = document.getElementById('masterMonthSelect').value;
       document.getElementById('newItemForm').reset();
       document.getElementById('newOpenQty').value = 0;
       document.getElementById('newOpenAmt').value = 0.00;
@@ -854,11 +845,10 @@
       });
     }
 
-    // STRICT WAREHOUSE MOVEMENT-DATE BASED BALANCE CALCULATOR FOR CASCADING ROLLOVER
     function calculateClosingBalanceUpToDate(itemCode, upToDateStr) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
-      let qty = item ? parseFloat(item.openQty) || 0 : 0;
-      let amt = item ? parseFloat(item.openAmt) || 0 : 0;
+      let qty = 0;
+      let amt = 0;
 
       const sortedTxs = [...transactions]
         .filter(tx => tx.code === itemCode && tx.date <= upToDateStr)
@@ -883,7 +873,7 @@
       return { qty, amt };
     }
 
-    // CASCADING ROLLOVER: Finds explicit upload or rolls over from previous month continuously
+    // STRICT WAREHOUSE WORKFLOW: If no opening balance exists prior to targetMonth, return 0 (nothing to show in past/future)
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (targetMonth === 'ALL') {
@@ -893,35 +883,30 @@
         };
       }
 
-      // 1. If explicit opening balance was uploaded for this specific month, use it
+      // Check if any opening balance exists at all in system
+      const uploadedMonths = Object.keys(explicitOpenBalances).sort();
+      if (uploadedMonths.length === 0) {
+        return { openQty: 0, openAmt: 0 };
+      }
+
+      earliestOpeningMonth = uploadedMonths[0];
+
+      // If target month is strictly BEFORE the earliest opening balance month, return 0 (Nothing in past)
+      if (targetMonth < earliestOpeningMonth) {
+        return { openQty: 0, openAmt: 0 };
+      }
+
+      // If explicit opening balance for this exact month exists, use it
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      // 2. Otherwise, calculate exact closing balance of the previous month based on movement dates
+      // Otherwise, cascade from previous month's closing balance based on movement dates
       const [y, m] = targetMonth.split('-').map(Number);
       let prevDate = new Date(y, m - 1, 0); // Last day of previous month
       let prevMonthLastDayStr = prevDate.toISOString().split('T')[0];
 
-      // Check if any explicit upload exists in past months
-      const uploadedMonths = Object.keys(explicitOpenBalances).sort();
-      if (uploadedMonths.length > 0) {
-        let earliestUploadMonth = uploadedMonths[0];
-        if (targetMonth < earliestUploadMonth) {
-          return { openQty: 0, openAmt: 0 };
-        }
-      }
-
       const rolloverStats = calculateClosingBalanceUpToDate(itemCode, prevMonthLastDayStr);
-      
-      // Fallback to item base openQty if no prior transactions exist
-      if (rolloverStats.qty === 0 && rolloverStats.amt === 0 && item) {
-        return {
-          openQty: parseFloat(item.openQty) || 0,
-          openAmt: parseFloat(item.openAmt) || 0
-        };
-      }
-
       return {
         openQty: rolloverStats.qty,
         openAmt: rolloverStats.amt
@@ -952,6 +937,12 @@
         const [y, m] = selectedMonth.split('-');
         const endOfMonthDate = new Date(y, m, 0).toISOString().split('T')[0];
         const upToDateStats = calculateClosingBalanceUpToDate(itemCode, endOfMonthDate);
+        
+        // If before earliest opening month, show 0
+        if (earliestOpeningMonth && selectedMonth < earliestOpeningMonth) {
+          return { openQty: 0, inQty: 0, outQty: 0, outstandingQty: 0, outstandingAmt: 0, avgPrice: 0, qtyDiff: 0 };
+        }
+
         outstandingQty = upToDateStats.qty;
         let upToDateAmt = upToDateStats.amt;
         const avgPrice = outstandingQty > 0 ? (upToDateAmt / outstandingQty) : 0;
@@ -1024,6 +1015,11 @@
         const rollover = getRolloverStats(item.code, selectedMonth);
         const canDelete = currentUser && currentUser.role === 'admin';
 
+        // If no rollover quantity (e.g. past month before opening balance), don't show empty rows
+        if (rollover.openQty === 0 && rollover.openAmt === 0 && earliestOpeningMonth && selectedMonth < earliestOpeningMonth) {
+          return;
+        }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
@@ -1057,6 +1053,10 @@
       catalogToRender.forEach((item, index) => {
         const stats = getItemStats(item.code, selectedMonth);
 
+        if (earliestOpeningMonth && selectedMonth < earliestOpeningMonth) {
+          return; // Skip rendering for past months before opening balance setup
+        }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="text-center fw-bold">${index + 1}</td>
@@ -1086,6 +1086,11 @@
       
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '';
+
+      if (earliestOpeningMonth && selectedMonth < earliestOpeningMonth) {
+        updateBannerTotals();
+        return; // Nothing to show for past months before opening balance
+      }
 
       let sortedCatalog = [...inventoryCatalog].sort((a, b) => a.code.localeCompare(b.code));
 
@@ -1217,21 +1222,19 @@
       const openQty = parseFloat(document.getElementById('newOpenQty').value) || 0;
       const openAmt = parseFloat(document.getElementById('newOpenAmt').value) || 0;
       const masterMonth = document.getElementById('masterMonthSelect').value;
+      const todayDateStr = new Date().toISOString().split('T')[0];
+      const targetMonth = masterMonth === 'ALL' ? todayDateStr.substring(0, 7) : masterMonth;
 
       let existing = inventoryCatalog.find(i => i.code === code);
       if (!existing) {
         inventoryCatalog.push({ code, descEn, descAr, openQty, openAmt });
       } else {
-        if (descEn) existing.descEn = descEn;
-        if (descAr) existing.descAr = descAr;
         existing.openQty = openQty;
         existing.openAmt = openAmt;
       }
 
-      if (masterMonth !== 'ALL') {
-        if (!explicitOpenBalances[masterMonth]) explicitOpenBalances[masterMonth] = {};
-        explicitOpenBalances[masterMonth][code] = { openQty, openAmt };
-      }
+      if (!explicitOpenBalances[targetMonth]) explicitOpenBalances[targetMonth] = {};
+      explicitOpenBalances[targetMonth][code] = { openQty, openAmt };
 
       renderAll();
 
@@ -1242,49 +1245,55 @@
       alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
-    function promptUploadMonth(e) {
+    // UPLOAD OPENING BALANCES READING DATE FROM FILE ITSELF
+    function processFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-
-      const uploadMonth = prompt(currentLang === 'ar' ? "أدخل تاريخ أو شهر الرصيد الافتتاحي (بالصيغة YYYY-MM مثل 2026-08):" : "Enter the month/date for these opening balances (format YYYY-MM, e.g., 2026-08):", "2026-08");
-      if (!uploadMonth) return;
 
       const reader = new FileReader();
       reader.onload = function(evt) {
         const lines = evt.target.result.split('\n');
         let count = 0;
-        if (!explicitOpenBalances[uploadMonth]) explicitOpenBalances[uploadMonth] = {};
+        let detectedMonth = null;
 
         lines.forEach((line, idx) => {
-          if (idx === 0) return;
+          if (!line.trim()) return;
           const parts = line.split(',');
-          if (parts.length >= 4) {
+          if (idx === 0) return; // Header
+
+          // Expected CSV format: Item Code, Item Description (En), Item Description (Ar), Opening Quantity, Opening Amount, Opening Date (YYYY-MM-DD or YYYY-MM)
+          if (parts.length >= 5) {
             const code = parts[0].trim();
             let descEn = parts[1].trim();
-            let descAr = parts.length >= 5 ? parts[2].trim() : "";
-            
-            if (descEn && !descAr) descAr = autoTranslateText(descEn, 'ar');
-            if (descAr && !descEn) descEn = autoTranslateText(descAr, 'en');
+            let descAr = parts[2].trim();
+            const openQty = parseFloat(parts[3]) || 0;
+            const openAmt = parseFloat(parts[4]) || 0;
+            const dateStr = parts[5] ? parts[5].trim() : new Date().toISOString().split('T')[0];
+            const fileMonth = dateStr.substring(0, 7); // Extracts YYYY-MM
 
-            const openQty = parseFloat(parts[parts.length >= 5 ? 3 : 2]) || 0;
-            const openAmt = parseFloat(parts[parts.length >= 5 ? 4 : 3]) || 0;
-            
-            if (code) {
+            if (fileMonth) detectedMonth = fileMonth;
+
+            if (code && fileMonth) {
+              if (!explicitOpenBalances[fileMonth]) explicitOpenBalances[fileMonth] = {};
+              explicitOpenBalances[fileMonth][code] = { openQty, openAmt };
+
               let existing = inventoryCatalog.find(i => i.code === code);
               if (!existing) {
-                inventoryCatalog.push({ code, descEn, descAr, openQty, openAmt });
+                inventoryCatalog.push({ code, descEn: descEn || "Item " + code, descAr: descAr || autoTranslateText(descEn, 'ar'), openQty, openAmt });
               } else {
-                existing.openQty = openQty;
-                existing.openAmt = openAmt;
+                if (descEn) existing.descEn = descEn;
+                if (descAr) existing.descAr = descAr;
               }
-              explicitOpenBalances[uploadMonth][code] = { openQty, openAmt };
               count++;
             }
           }
         });
-        document.getElementById('masterMonthSelect').value = uploadMonth;
+
+        if (detectedMonth) {
+          document.getElementById('masterMonthSelect').value = detectedMonth;
+        }
         renderAll();
-        alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح لشهر ${uploadMonth}!` : `Successfully imported ${count} opening balances for ${uploadMonth}!`);
+        alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح من الملف!` : `Successfully imported ${count} opening balances from file!`);
       };
       reader.readAsText(file, 'UTF-8');
     }
@@ -1440,7 +1449,7 @@
     }
 
     function downloadUploadTemplate() {
-      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00";
+      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount,Opening Date\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50,2026-08-01\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00,2026-08-01";
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
