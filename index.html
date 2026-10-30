@@ -508,7 +508,7 @@
         labelModalDescEn: "وصف الصنف (إنجليزي - English Description)",
         labelModalDescAr: "وصف الصنف (عربي - Arabic Description)",
         labelModalQty: "الرصيد الافتتاحي (Opening Balance)",
-        labelModalAmt: "المبلغ الافتتاحي (Opening Amount)",
+        labelModalAmt: "المبلغ الافتتاحي (المبلغ)",
         saveItemBtn: "حفظ الصنف",
         deleteBtn: "حذف",
         editBtn: "تعديل",
@@ -854,13 +854,12 @@
       });
     }
 
-    // STRICT MOVEMENT-DATE BASED BALANCE CALCULATOR FOR PREVIOUS MONTH ROLLOVER
+    // STRICT WAREHOUSE MOVEMENT-DATE BASED BALANCE CALCULATOR FOR CASCADING ROLLOVER
     function calculateClosingBalanceUpToDate(itemCode, upToDateStr) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       let qty = item ? parseFloat(item.openQty) || 0 : 0;
       let amt = item ? parseFloat(item.openAmt) || 0 : 0;
 
-      // Sort transactions strictly by movement date (tx.date)
       const sortedTxs = [...transactions]
         .filter(tx => tx.code === itemCode && tx.date <= upToDateStr)
         .sort((a, b) => a.date.localeCompare(b.date));
@@ -884,6 +883,7 @@
       return { qty, amt };
     }
 
+    // CASCADING ROLLOVER: Finds explicit upload or rolls over from previous month continuously
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (targetMonth === 'ALL') {
@@ -893,17 +893,35 @@
         };
       }
 
-      // If explicit opening balance is uploaded for this specific month, use it
+      // 1. If explicit opening balance was uploaded for this specific month, use it
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      // For any target month, calculate exact closing balance of previous month based on movement dates
+      // 2. Otherwise, calculate exact closing balance of the previous month based on movement dates
       const [y, m] = targetMonth.split('-').map(Number);
       let prevDate = new Date(y, m - 1, 0); // Last day of previous month
       let prevMonthLastDayStr = prevDate.toISOString().split('T')[0];
 
+      // Check if any explicit upload exists in past months
+      const uploadedMonths = Object.keys(explicitOpenBalances).sort();
+      if (uploadedMonths.length > 0) {
+        let earliestUploadMonth = uploadedMonths[0];
+        if (targetMonth < earliestUploadMonth) {
+          return { openQty: 0, openAmt: 0 };
+        }
+      }
+
       const rolloverStats = calculateClosingBalanceUpToDate(itemCode, prevMonthLastDayStr);
+      
+      // Fallback to item base openQty if no prior transactions exist
+      if (rolloverStats.qty === 0 && rolloverStats.amt === 0 && item) {
+        return {
+          openQty: parseFloat(item.openQty) || 0,
+          openAmt: parseFloat(item.openAmt) || 0
+        };
+      }
+
       return {
         openQty: rolloverStats.qty,
         openAmt: rolloverStats.amt
@@ -1179,7 +1197,6 @@
       new bootstrap.Tab(triggerEl).show();
     }
 
-    // ADD SINGLE ITEM: Entry date will be same date of entering data (today's date)
     function addNewItem(e) {
       e.preventDefault();
       const code = document.getElementById('newCode').value.trim();
@@ -1211,8 +1228,6 @@
         existing.openAmt = openAmt;
       }
 
-      // Add as opening balance entry on current entry date
-      const todayDateStr = new Date().toISOString().split('T')[0];
       if (masterMonth !== 'ALL') {
         if (!explicitOpenBalances[masterMonth]) explicitOpenBalances[masterMonth] = {};
         explicitOpenBalances[masterMonth][code] = { openQty, openAmt };
@@ -1227,12 +1242,11 @@
       alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
-    // UPLOAD OPENING BALANCES WITH CHOSEN DATE PROMPT
     function promptUploadMonth(e) {
       const file = e.target.files[0];
       if (!file) return;
 
-      const uploadMonth = prompt(currentLang === 'ar' ? "أدخل تاريخ أو شهر الرصيد الافتتاحي (بالصيغة YYYY-MM مثل 2026-10):" : "Enter the month/date for these opening balances (format YYYY-MM, e.g., 2026-10):", "2026-10");
+      const uploadMonth = prompt(currentLang === 'ar' ? "أدخل تاريخ أو شهر الرصيد الافتتاحي (بالصيغة YYYY-MM مثل 2026-08):" : "Enter the month/date for these opening balances (format YYYY-MM, e.g., 2026-08):", "2026-08");
       if (!uploadMonth) return;
 
       const reader = new FileReader();
