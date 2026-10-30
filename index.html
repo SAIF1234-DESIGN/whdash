@@ -111,7 +111,7 @@
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
           <label class="fw-bold text-primary mb-0" data-i18n="masterMonthLabel">📅 Master Active Month Selector:</label>
-          <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 210px;" size="1">
+          <select id="masterMonthSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onMasterMonthChanged()" style="width: 210px;" size="3">
             <!-- Dynamically populated active months only -->
           </select>
           <small class="text-muted" data-i18n="masterMonthHint">(Strictly calculated by movement dates)</small>
@@ -684,7 +684,6 @@
       optAll.text = currentLang === 'ar' ? 'جميع الشهور / YTD' : 'All Months / YTD';
       select.appendChild(optAll);
 
-      // Show 3 options visible with scrolling enabled
       select.size = 3;
 
       if (prevSelected && Array.from(select.options).some(o => o.value === prevSelected)) {
@@ -887,33 +886,6 @@
       });
     }
 
-    function calculateClosingBalanceUpToDate(itemCode, upToDateStr) {
-      let qty = 0;
-      let amt = 0;
-
-      const sortedTxs = [...transactions]
-        .filter(tx => tx.code === itemCode && tx.date <= upToDateStr)
-        .sort((a, b) => a.date.localeCompare(b.date));
-
-      sortedTxs.forEach(tx => {
-        let inQ = parseFloat(tx.inQty) || 0;
-        let outQ = parseFloat(tx.outQty) || 0;
-        let invAmt = parseFloat(tx.invoiceAmt) || 0;
-
-        if (inQ > 0) {
-          qty += inQ;
-          amt += invAmt;
-        }
-        if (outQ > 0) {
-          let avgP = qty > 0 ? amt / qty : 0;
-          qty -= outQ;
-          amt -= outQ * avgP;
-        }
-      });
-
-      return { qty, amt };
-    }
-
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (targetMonth === 'ALL') {
@@ -939,8 +911,8 @@
       }
 
       const [y, m] = targetMonth.split('-').map(Number);
-      let prevDate = new Date(y, m - 1, 0); 
-      let prevMonthLastDayStr = prevDate.toISOString().split('T')[0];
+      let simDate = new Date(earliestOpeningMonth + '-01');
+      let targetDateObj = new Date(targetMonth + '-01');
 
       let baseQty = 0;
       let baseAmt = 0;
@@ -953,8 +925,6 @@
         baseAmt = parseFloat(item.openAmt) || 0;
       }
 
-      let simDate = new Date(earliestOpeningMonth + '-01');
-      let targetDateObj = new Date(targetMonth + '-01');
       let runningQ = baseQty;
       let runningA = baseAmt;
 
@@ -986,22 +956,17 @@
     }
 
     function getItemStats(itemCode, selectedMonth) {
-      const itemTxs = transactions.filter(tx => tx.code === itemCode);
       const rollover = getRolloverStats(itemCode, selectedMonth);
-
       const openQty = rollover.openQty;
       const openAmt = rollover.openAmt;
 
-      let filteredTxs = itemTxs;
+      let filteredTxs = transactions.filter(tx => tx.code === itemCode);
       if (selectedMonth && selectedMonth !== 'ALL') {
-        filteredTxs = itemTxs.filter(tx => tx.date.startsWith(selectedMonth));
+        filteredTxs = filteredTxs.filter(tx => tx.date.startsWith(selectedMonth));
       }
 
       let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
       let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
-
-      let totalIn = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
-      let totalOut = itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
 
       if (selectedMonth !== 'ALL') {
         const [y, m] = selectedMonth.split('-');
@@ -1016,37 +981,39 @@
 
         let simQ = openQty;
         let simA = openAmt;
-        let totalInAmt = openAmt;
 
-        cumulativeTxs.forEach(tx => {
-          let inQ = parseFloat(tx.inQty) || 0;
-          let outQ = parseFloat(tx.outQty) || 0;
-          let invAmt = parseFloat(tx.invoiceAmt) || 0;
+        // Apply only transactions within the selected month for inQty/outQty, but use opening balance as base
+        let monthTxs = cumulativeTxs.filter(tx => tx.date.startsWith(selectedMonth));
+        let mIn = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
+        let mOut = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
+        
+        let mInAmt = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
 
-          if (inQ > 0) {
-            simQ += inQ;
-            simA += invAmt;
-            totalInAmt += invAmt;
-          }
-          if (outQ > 0) {
-            let avgP = simQ > 0 ? simA / simQ : 0;
-            simQ -= outQ;
-            simA -= outQ * avgP;
-          }
-        });
+        let totalSimQ = openQty + mIn;
+        let totalSimA = openAmt + mInAmt;
 
-        let avgPrice = simQ > 0 ? (simA / simQ) : (openQty > 0 ? openAmt / openQty : 0);
-        const qtyDiff = simQ - openQty;
+        if (mOut > 0) {
+          let avgP = totalSimQ > 0 ? totalSimA / totalSimQ : (openQty > 0 ? openAmt / openQty : 0);
+          totalSimQ -= mOut;
+          totalSimA -= mOut * avgP;
+        }
 
-        return { openQty, inQty, outQty, closingQty: simQ, closingAmt: simA, avgPrice, qtyDiff };
+        let avgPrice = totalSimQ > 0 ? (totalSimA / totalSimQ) : (openQty > 0 ? openAmt / openQty : 0);
+        const qtyDiff = mIn - mOut; // MoM difference based on active month movements
+
+        return { openQty, inQty: mIn, outQty: mOut, closingQty: totalSimQ, closingAmt: totalSimA, avgPrice, qtyDiff };
       }
       
-      const avgPrice = (openQty + totalIn) > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + totalIn) : 0;
+      let totalIn = transactions.filter(tx => tx.code === itemCode).reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
+      let totalOut = transactions.filter(tx => tx.code === itemCode).reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
+      let totalInAmt = transactions.filter(tx => tx.code === itemCode).reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
+
+      const avgPrice = (openQty + totalIn) > 0 ? (openAmt + totalInAmt) / (openQty + totalIn) : 0;
       const finalClosingQty = openQty + totalIn - totalOut;
       const finalClosingAmt = finalClosingQty * avgPrice;
       const qtyDiff = finalClosingQty - openQty;
 
-      return { openQty, inQty, outQty, closingQty: finalClosingQty, closingAmt: finalClosingAmt, avgPrice, qtyDiff };
+      return { openQty, inQty: totalIn, outQty: totalOut, closingQty: finalClosingQty, closingAmt: finalClosingAmt, avgPrice, qtyDiff };
     }
 
     function updateBannerTotals() {
