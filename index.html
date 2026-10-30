@@ -618,7 +618,26 @@
       }
     }
 
-    // ONLY SHOW RELEVANT MONTHS WITH DATA + CURRENT/FUTURE 2026 MONTHS (NO UNNECESSARY PAST YEARS)
+    // STRICT DATE PARSER TO PREVENT 1901 OR INVALID PARSING
+    function parseDateString(rawDate) {
+      if (!rawDate) return new Date().toISOString().split('T')[0];
+      let clean = rawDate.trim().replace(/['"]/g, '');
+      
+      // Handle DD-MM-YYYY or DD/MM/YYYY or YYYY-MM-DD
+      let partsD = clean.split(/[-/]/);
+      if (partsD.length === 3) {
+        if (partsD[0].length === 4) {
+          // YYYY-MM-DD
+          return `${partsD[0]}-${partsD[1].padStart(2,'0')}-${partsD[2].padStart(2,'0')}`;
+        } else if (partsD[2].length === 4) {
+          // DD-MM-YYYY -> Convert to YYYY-MM-DD
+          return `${partsD[2]}-${partsD[1].padStart(2,'0')}-${partsD[0].padStart(2,'0')}`;
+        }
+      }
+      return clean.length >= 7 ? clean.substring(0, 10) : new Date().toISOString().split('T')[0];
+    }
+
+    // POPULATE RELEVANT 2026 MONTHS
     function populateDynamicMonths() {
       const select = document.getElementById('masterMonthSelect');
       if (!select) return;
@@ -630,22 +649,22 @@
       const currentMonthNum = now.getMonth() + 1;
       const currentVal = `${currentYear}-${currentMonthNum < 10 ? '0' + currentMonthNum : currentMonthNum}`;
 
-      // Gather months that have explicit data or transactions
       let activeMonthsSet = new Set();
       activeMonthsSet.add(currentVal);
 
-      Object.keys(explicitOpenBalances).forEach(m => activeMonthsSet.add(m));
+      Object.keys(explicitOpenBalances).forEach(m => {
+        if (m && m.length === 7 && m.startsWith('20')) activeMonthsSet.add(m);
+      });
       transactions.forEach(tx => {
-        if (tx.date) activeMonthsSet.add(tx.date.substring(0, 7));
+        if (tx.date && tx.date.length >= 7) activeMonthsSet.add(tx.date.substring(0, 7));
       });
 
-      // Also include current month and immediate future months of 2026
       for (let m = currentMonthNum; m <= 12; m++) {
         let mStr = m < 10 ? '0' + m : '' + m;
         activeMonthsSet.add(`${currentYear}-${mStr}`);
       }
 
-      let sortedMonths = Array.from(activeMonthsSet).sort();
+      let sortedMonths = Array.from(activeMonthsSet).filter(m => m.startsWith('20')).sort();
 
       sortedMonths.forEach(val => {
         const [y, m] = val.split('-').map(Number);
@@ -666,7 +685,6 @@
         select.appendChild(opt);
       });
 
-      // Add ALL Months option
       let optAll = document.createElement('option');
       optAll.value = 'ALL';
       optAll.text = currentLang === 'ar' ? 'جميع الشهور / YTD' : 'All Months / YTD';
@@ -719,7 +737,7 @@
 
     let inventoryCatalog = [];
     let transactions = [];
-    let explicitOpenBalances = {}; // Format: { "YYYY-MM": { itemCode: { openQty, openAmt } } }
+    let explicitOpenBalances = {}; 
     let earliestOpeningMonth = null;
 
     let currentTxFilterCode = null;
@@ -889,7 +907,7 @@
       return { qty, amt };
     }
 
-    // WAREHOUSE ROLLOVER: Automatically cascades closing balance of previous month to current month
+    // ACCURATE MONTH-END ROLLOVER LOGIC CASCADING TO CURRENT MONTH
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (targetMonth === 'ALL') {
@@ -899,9 +917,9 @@
         };
       }
 
-      const uploadedMonths = Object.keys(explicitOpenBalances).sort();
+      const uploadedMonths = Object.keys(explicitOpenBalances).filter(m => m.startsWith('20')).sort();
       if (uploadedMonths.length === 0) {
-        return { openQty: 0, openAmt: 0 };
+        return { openQty: item ? parseFloat(item.openQty) || 0 : 0, openAmt: item ? parseFloat(item.openAmt) || 0 : 0 };
       }
 
       earliestOpeningMonth = uploadedMonths[0];
@@ -910,24 +928,59 @@
         return { openQty: 0, openAmt: 0 };
       }
 
-      // If explicit opening balance for this month exists, use it
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
         return explicitOpenBalances[targetMonth][itemCode];
       }
 
-      // Otherwise calculate exact closing balance of previous month based on movement dates
+      // Cascade from previous month closing balance
       const [y, m] = targetMonth.split('-').map(Number);
-      let prevDate = new Date(y, m - 1, 0); // Last day of previous month
+      let prevDate = new Date(y, m - 1, 0); 
       let prevMonthLastDayStr = prevDate.toISOString().split('T')[0];
 
       const prevClosing = calculateClosingBalanceUpToDate(itemCode, prevMonthLastDayStr);
       
-      // If no transactions in past, check if item had initial base opening balance in earliest month
       if (prevClosing.qty === 0 && prevClosing.amt === 0) {
-        const baseOpen = explicitOpenBalances[earliestOpeningMonth] && explicitOpenBalances[earliestOpeningMonth][itemCode];
-        if (baseOpen && targetMonth === earliestOpeningMonth) {
-          return baseOpen;
+        let currentIterMonth = targetMonth;
+        let baseQty = 0;
+        let baseAmt = 0;
+        
+        if (explicitOpenBalances[earliestOpeningMonth] && explicitOpenBalances[earliestOpeningMonth][itemCode]) {
+          baseQty = explicitOpenBalances[earliestOpeningMonth][itemCode].openQty;
+          baseAmt = explicitOpenBalances[earliestOpeningMonth][itemCode].openAmt;
+        } else if (item) {
+          baseQty = parseFloat(item.openQty) || 0;
+          baseAmt = parseFloat(item.openAmt) || 0;
         }
+
+        // Simulate rolling up from earliest month to target month
+        let simDate = new Date(earliestOpeningMonth + '-01');
+        let targetDateObj = new Date(targetMonth + '-01');
+        let runningQ = baseQty;
+        let runningA = baseAmt;
+
+        while (simDate < targetDateObj) {
+          let mStr = simDate.toISOString().substring(0, 7);
+          let mEnd = new Date(simDate.getFullYear(), simDate.getMonth() + 1, 0).toISOString().split('T')[0];
+          
+          let monthTxs = transactions.filter(tx => tx.code === itemCode && tx.date.startsWith(mStr));
+          monthTxs.sort((a, b) => a.date.localeCompare(b.date));
+
+          monthTxs.forEach(tx => {
+            if (tx.inQty > 0) {
+              runningQ += tx.inQty;
+              runningA += tx.invoiceAmt || 0;
+            }
+            if (tx.outQty > 0) {
+              let avgP = runningQ > 0 ? runningA / runningQ : 0;
+              runningQ -= tx.outQty;
+              runningA -= tx.outQty * avgP;
+            }
+          });
+
+          simDate.setMonth(simDate.getMonth() + 1);
+        }
+
+        return { openQty: runningQ, openAmt: runningA };
       }
 
       return {
@@ -965,11 +1018,16 @@
         }
 
         const upToDateStats = calculateClosingBalanceUpToDate(itemCode, endOfMonthDate);
-        outstandingQty = upToDateStats.qty;
-        let upToDateAmt = upToDateStats.amt;
-        const avgPrice = outstandingQty > 0 ? (upToDateAmt / outstandingQty) : 0;
-        const qtyDiff = outstandingQty - openQty;
-        return { openQty, inQty, outQty, outstandingQty, outstandingAmt: upToDateAmt, avgPrice, qtyDiff };
+        
+        // Ensure opening balance from rollover is correctly factored in
+        let cumulativeTxsQty = transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0) - (parseFloat(tx.outQty) || 0), 0);
+        let calculatedOutQ = openQty + cumulativeTxsQty;
+        
+        let avgPrice = calculatedOutQ > 0 ? (openAmt + transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate).reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0) || 1) : 0;
+        let calculatedOutAmt = calculatedOutQ * avgPrice;
+
+        const qtyDiff = calculatedOutQ - openQty;
+        return { openQty, inQty, outQty, outstandingQty: calculatedOutQ, outstandingAmt: calculatedOutAmt, avgPrice, qtyDiff };
       }
       
       const avgPrice = (openQty + totalIn) > 0 ? (openAmt + itemTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0)) / (openQty + totalIn) : 0;
@@ -1267,6 +1325,7 @@
       alert(currentLang === 'ar' ? 'تمت إضافة الصنف بنجاح!' : 'Item successfully added!');
     }
 
+    // ROBUST FILE UPLOAD WITH CORRECT DATE EXTRACTION
     function processFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -1288,12 +1347,16 @@
             let descAr = parts[2].trim();
             const openQty = parseFloat(parts[3]) || 0;
             const openAmt = parseFloat(parts[4]) || 0;
-            const dateStr = parts[5] ? parts[5].trim() : new Date().toISOString().split('T')[0];
-            const fileMonth = dateStr.substring(0, 7);
+            const rawDateStr = parts[5] ? parts[5].trim() : '2026-01-01';
+            
+            const parsedDate = parseDateString(rawDateStr);
+            const fileMonth = parsedDate.substring(0, 7);
 
-            if (fileMonth) detectedMonth = fileMonth;
+            if (fileMonth && fileMonth.startsWith('20')) {
+              detectedMonth = fileMonth;
+            }
 
-            if (code && fileMonth) {
+            if (code && fileMonth && fileMonth.startsWith('20')) {
               if (!explicitOpenBalances[fileMonth]) explicitOpenBalances[fileMonth] = {};
               explicitOpenBalances[fileMonth][code] = { openQty, openAmt };
 
@@ -1303,6 +1366,8 @@
               } else {
                 if (descEn) existing.descEn = descEn;
                 if (descAr) existing.descAr = descAr;
+                existing.openQty = openQty;
+                existing.openAmt = openAmt;
               }
               count++;
             }
@@ -1471,7 +1536,7 @@
     }
 
     function downloadUploadTemplate() {
-      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount,Opening Date\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50,2026-08-01\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00,2026-08-01";
+      const csvContent = "\ufeffItem Code,Item Description (English),Item Description (Arabic),Opening Balance Quantity,Opening Balance Amount,Opening Date\n763225,Black Gypsum Screw 3/4*7,برغى جبس اسود خشن 3/4*7,42000,1207.50,2026-01-01\n749,Stickers 95 Noor Khawi,استيكرات 95 نور خوي,40000,0.00,2026-01-01";
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
