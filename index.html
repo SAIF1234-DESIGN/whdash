@@ -960,14 +960,6 @@
       const openQty = rollover.openQty;
       const openAmt = rollover.openAmt;
 
-      let filteredTxs = transactions.filter(tx => tx.code === itemCode);
-      if (selectedMonth && selectedMonth !== 'ALL') {
-        filteredTxs = filteredTxs.filter(tx => tx.date.startsWith(selectedMonth));
-      }
-
-      let inQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
-      let outQty = filteredTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
-
       if (selectedMonth !== 'ALL') {
         const [y, m] = selectedMonth.split('-');
         const endOfMonthDate = new Date(y, m, 0).toISOString().split('T')[0];
@@ -982,11 +974,9 @@
         let simQ = openQty;
         let simA = openAmt;
 
-        // Apply only transactions within the selected month for inQty/outQty, but use opening balance as base
         let monthTxs = cumulativeTxs.filter(tx => tx.date.startsWith(selectedMonth));
         let mIn = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
         let mOut = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
-        
         let mInAmt = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.invoiceAmt) || 0), 0);
 
         let totalSimQ = openQty + mIn;
@@ -999,7 +989,9 @@
         }
 
         let avgPrice = totalSimQ > 0 ? (totalSimA / totalSimQ) : (openQty > 0 ? openAmt / openQty : 0);
-        const qtyDiff = mIn - mOut; // MoM difference based on active month movements
+        
+        // STRICTLY CALCULATED ACCORDING TO SELECTED MONTH ONLY (Incoming - Outgoing of this month)
+        const qtyDiff = mIn - mOut;
 
         return { openQty, inQty: mIn, outQty: mOut, closingQty: totalSimQ, closingAmt: totalSimA, avgPrice, qtyDiff };
       }
@@ -1011,7 +1003,7 @@
       const avgPrice = (openQty + totalIn) > 0 ? (openAmt + totalInAmt) / (openQty + totalIn) : 0;
       const finalClosingQty = openQty + totalIn - totalOut;
       const finalClosingAmt = finalClosingQty * avgPrice;
-      const qtyDiff = finalClosingQty - openQty;
+      const qtyDiff = totalIn - totalOut;
 
       return { openQty, inQty: totalIn, outQty: totalOut, closingQty: finalClosingQty, closingAmt: finalClosingAmt, avgPrice, qtyDiff };
     }
