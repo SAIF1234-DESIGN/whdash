@@ -1076,8 +1076,9 @@
         document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerOpenAmtText;
 
         inventoryCatalog.forEach(item => {
-          const rollover = getRolloverStats(item.code, selectedMonth);
-          if (rollover.openQty > 0 || rollover.openAmt > 0) {
+          const itemOpenMonth = item.openDate ? item.openDate.substring(0, 7) : '2026-01';
+          if (itemOpenMonth <= selectedMonth) {
+            const rollover = getRolloverStats(item.code, selectedMonth);
             totalQty += rollover.openQty;
             totalAmt += rollover.openAmt;
           }
@@ -1097,7 +1098,7 @@
       document.getElementById('bannerAmt').innerText = totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
     }
 
-    // OPENING BALANCE TABLE: Consolidated to single row per item when ALL is selected
+    // OPENING BALANCE TABLE: Cumulative per month (Jan = Jan only, Feb = Jan + Feb, Mar = Feb + Mar, All = Single row per item)
     function renderOpeningBalanceTable() {
       const tbody = document.getElementById('openingBalanceTableBody');
       if (!tbody) return;
@@ -1112,34 +1113,57 @@
         item.code.toLowerCase().includes(searchQuery) || item.descEn.toLowerCase().includes(searchQuery) || item.descAr.toLowerCase().includes(searchQuery)
       );
 
-      filtered.forEach((item, index) => {
-        let openQ = parseFloat(item.openQty) || 0;
-        let openA = parseFloat(item.openAmt) || 0;
-        let openDate = item.openDate || '2026-01-01';
+      let globalSn = 1;
 
-        if (selectedMonth !== 'ALL') {
+      if (selectedMonth === 'ALL') {
+        // Single row per item for ALL months / YTD view without duplication
+        filtered.forEach(item => {
+          const rollover = getRolloverStats(item.code, item.openDate ? item.openDate.substring(0, 7) : '2026-01');
+          const canDelete = currentUser && currentUser.role === 'admin';
+          tbody.innerHTML += `
+            <tr>
+              <td class="text-center fw-bold">${globalSn++}</td>
+              <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
+              <td class="fw-semibold">${item.descEn || '-'}</td>
+              <td class="fw-semibold">${item.descAr || '-'}</td>
+              <td class="text-end">${parseFloat(item.openQty || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end">SAR ${parseFloat(item.openAmt || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-center fw-bold text-primary">All Months / YTD (${item.openDate || '2026-01-01'})</td>
+              <td class="text-center">
+                ${canDelete ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>` : `<small class="text-muted">View Only</small>`}
+              </td>
+            </tr>
+          `;
+        });
+      } else {
+        // Cumulative cumulative view: Jan = Jan only, Feb = Jan + Feb items, etc.
+        let matchingItems = filtered.filter(item => {
+          const itemOpenMonth = item.openDate ? item.openDate.substring(0, 7) : '2026-01';
+          return itemOpenMonth <= selectedMonth;
+        });
+
+        matchingItems.forEach((item, index) => {
           const rollover = getRolloverStats(item.code, selectedMonth);
-          openQ = rollover.openQty;
-          openA = rollover.openAmt;
-          openDate = selectedMonth + '-01';
-        }
+          const canDelete = currentUser && currentUser.role === 'admin';
+          const [y, mm] = selectedMonth.split('-').map(Number);
+          const monthName = new Date(y, mm - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
 
-        const canDelete = currentUser && currentUser.role === 'admin';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="text-center fw-bold">${index + 1}</td>
-          <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
-          <td class="fw-semibold">${item.descEn || '-'}</td>
-          <td class="fw-semibold">${item.descAr || '-'}</td>
-          <td class="text-end">${openQ.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-end">SAR ${openA.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="text-center fw-bold text-secondary">${openDate}</td>
-          <td class="text-center">
-            ${canDelete ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>` : `<small class="text-muted">View Only</small>`}
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-center fw-bold">${index + 1}</td>
+            <td class="text-center"><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
+            <td class="fw-semibold">${item.descEn || '-'}</td>
+            <td class="fw-semibold">${item.descAr || '-'}</td>
+            <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="text-center fw-bold text-secondary">${monthName}</td>
+            <td class="text-center">
+              ${canDelete ? `<button class="btn btn-sm btn-outline-danger py-0 px-2 fw-semibold" onclick="deleteItem('${item.code}')">${translations[currentLang].deleteBtn}</button>` : `<small class="text-muted">View Only</small>`}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
       updateBannerTotals();
     }
 
@@ -1209,11 +1233,13 @@
           `;
         });
       } else {
-        catalogToRender.forEach((item, index) => {
-          const stats = getItemStats(item.code, selectedMonth);
+        let matchingCatalog = catalogToRender.filter(item => {
           const itemOpenMonth = item.openDate ? item.openDate.substring(0, 7) : '2026-01';
-          if (stats.openQty === 0 && stats.closingQty === 0 && selectedMonth < itemOpenMonth) return;
+          return itemOpenMonth <= selectedMonth;
+        });
 
+        matchingCatalog.forEach((item, index) => {
+          const stats = getItemStats(item.code, selectedMonth);
           const [y, mm] = selectedMonth.split('-').map(Number);
           const monthName = new Date(y, mm - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
 
