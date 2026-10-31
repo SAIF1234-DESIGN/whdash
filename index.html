@@ -189,9 +189,18 @@
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h5 class="fw-bold text-primary mb-0" data-i18n="indexSheetTitle">📊 Master Item Index & Closing Stock Sheet</h5>
-            <div class="d-flex align-items-center gap-2">
+            <!-- Custom Date Range Filters for Item Index -->
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <div class="d-flex align-items-center gap-1">
+                <small class="fw-bold text-secondary">From:</small>
+                <input type="date" id="indexFromDate" class="form-control form-control-sm" onchange="renderItemIndexTable()" style="width: 135px;">
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <small class="fw-bold text-secondary">To:</small>
+                <input type="date" id="indexToDate" class="form-control form-control-sm" onchange="renderItemIndexTable()" style="width: 135px;">
+              </div>
               <button class="btn btn-sm btn-outline-secondary fw-semibold" onclick="resetIndexFilter()" data-i18n="showAllBtn">Show All Inventory</button>
-              <input type="text" id="indexSearchInput" class="form-control form-control-sm" list="inventoryListOptions" data-i18n-placeholder="searchIndexPlaceholder" placeholder="🔍 Search code or name..." oninput="filterIndexBySearch(this.value)" style="width: 240px;">
+              <input type="text" id="indexSearchInput" class="form-control form-control-sm" list="inventoryListOptions" data-i18n-placeholder="searchIndexPlaceholder" placeholder="🔍 Search code or name..." oninput="filterIndexBySearch(this.value)" style="width: 200px;">
             </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
@@ -209,7 +218,7 @@
                   <th data-i18n="thQtyDiff">Quantity Diff (MoM)<br>فرق الكميات</th>
                   <th data-i18n="thClosingAmt">Closing Amount<br>المبلغ الختامي</th>
                   <th data-i18n="thAvgPrice">Average Price<br>متوسط السعر</th>
-                  <th data-i18n="thMonth">Month</th>
+                  <th data-i18n="thMonth">Period / Month</th>
                   <th data-i18n="thActions">Actions</th>
                 </tr>
               </thead>
@@ -813,6 +822,8 @@
     function resetIndexFilter() {
       currentIndexFilterCode = null;
       document.getElementById('indexSearchInput').value = "";
+      document.getElementById('indexFromDate').value = "";
+      document.getElementById('indexToDate').value = "";
       renderItemIndexTable();
     }
 
@@ -885,7 +896,6 @@
       });
     }
 
-    // Helper: Calculates Opening Balance for an item in a specific month via automated monthly rollover from its start month
     function getRolloverStats(itemCode, targetMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (!item) return { openQty: 0, openAmt: 0 };
@@ -896,7 +906,6 @@
         return { openQty: parseFloat(item.openQty) || 0, openAmt: parseFloat(item.openAmt) || 0 };
       }
 
-      // Roll over month by month from itemOpenMonth up to targetMonth
       let [currY, currM] = itemOpenMonth.split('-').map(Number);
       let [targetY, targetM] = targetMonth.split('-').map(Number);
 
@@ -991,6 +1000,64 @@
       return { openQty: openQ, openAmt: openA, inQty: totalIn, outQty: totalOut, closingQty: finalClosingQty, closingAmt: finalClosingAmt, avgPrice, qtyDiff };
     }
 
+    // Custom Date Range Stats Calculation for Item Index
+    function getItemCustomRangeStats(itemCode, fromDate, toDate) {
+      const item = inventoryCatalog.find(i => i.code === itemCode);
+      if (!item) return { openQty: 0, openAmt: 0, inQty: 0, outQty: 0, closingQty: 0, closingAmt: 0, avgPrice: 0, qtyDiff: 0 };
+
+      // Opening balance calculation up to fromDate - 1 day
+      let baseOpenQty = parseFloat(item.openQty) || 0;
+      let baseOpenAmt = parseFloat(item.openAmt) || 0;
+      let itemOpenDate = item.openDate || '2026-01-01';
+
+      let priorTxs = transactions.filter(tx => tx.code === itemCode && tx.date < fromDate);
+      priorTxs.sort((a, b) => a.date.localeCompare(b.date));
+
+      let runningQ = baseOpenQty;
+      let runningA = baseOpenAmt;
+
+      priorTxs.forEach(tx => {
+        let inQ = parseFloat(tx.inQty) || 0;
+        let outQ = parseFloat(tx.outQty) || 0;
+        let invAmt = parseFloat(tx.invoiceAmt) || 0;
+        if (inQ > 0) { runningQ += inQ; runningA += invAmt; }
+        if (outQ > 0) {
+          let avgP = runningQ > 0 ? runningA / runningQ : 0;
+          runningQ -= outQ;
+          runningA -= outQ * avgP;
+        }
+      });
+
+      const effectiveOpenQty = runningQ;
+      const effectiveOpenAmt = runningA;
+
+      // Transactions within fromDate and toDate
+      let rangeTxs = transactions.filter(tx => tx.code === itemCode && tx.date >= fromDate && tx.date <= toDate);
+      rangeTxs.sort((a, b) => a.date.localeCompare(b.date));
+
+      let rIn = 0, rOut = 0, rInAmt = 0;
+      rangeTxs.forEach(tx => {
+        let inQ = parseFloat(tx.inQty) || 0;
+        let outQ = parseFloat(tx.outQty) || 0;
+        let invAmt = parseFloat(tx.invoiceAmt) || 0;
+        if (inQ > 0) { rIn += inQ; rInAmt += invAmt; }
+        if (outQ > 0) { rOut += outQ; }
+      });
+
+      let totalSimQ = effectiveOpenQty + rIn;
+      let totalSimA = effectiveOpenAmt + rInAmt;
+      if (rOut > 0) {
+        let avgP = totalSimQ > 0 ? totalSimA / totalSimQ : (effectiveOpenQty > 0 ? effectiveOpenAmt / effectiveOpenQty : 0);
+        totalSimQ -= rOut;
+        totalSimA -= rOut * avgP;
+      }
+
+      let avgPrice = totalSimQ > 0 ? (totalSimA / totalSimQ) : (effectiveOpenQty > 0 ? effectiveOpenAmt / effectiveOpenQty : 0);
+      const qtyDiff = rIn - rOut;
+
+      return { openQty: effectiveOpenQty, openAmt: effectiveOpenAmt, inQty: rIn, outQty: rOut, closingQty: totalSimQ, closingAmt: totalSimA, avgPrice, qtyDiff };
+    }
+
     function updateBannerTotals() {
       const masterSelect = document.getElementById('masterMonthSelect');
       if (!masterSelect) return;
@@ -1005,8 +1072,8 @@
       if (selectedMonth === 'ALL') {
         inventoryCatalog.forEach(item => {
           const stats = getItemStats(item.code, 'ALL');
-          totalQty += stats.openQty;
-          totalAmt += stats.openAmt;
+          totalQty += stats.closingQty;
+          totalAmt += stats.closingAmt;
         });
       } else if (activeTabName === 'opening') {
         document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerOpenQtyText;
@@ -1051,7 +1118,6 @@
       let globalSn = 1;
 
       if (selectedMonth === 'ALL') {
-        // Accumulate month-by-month rollover rows for all active months
         let activeMonths = Array.from(new Set([
           ...inventoryCatalog.map(i => i.openDate ? i.openDate.substring(0, 7) : '2026-01'),
           ...transactions.map(t => t.date.substring(0, 7))
@@ -1114,12 +1180,16 @@
       updateBannerTotals();
     }
 
+    // UPDATED ITEM INDEX RENDERER: Single row per item when ALL or Custom Date Range is selected
     function renderItemIndexTable() {
       const tbody = document.getElementById('itemIndexTableBody');
       if (!tbody) return;
       tbody.innerHTML = '';
+      
       const masterSelect = document.getElementById('masterMonthSelect');
       const selectedMonth = masterSelect ? masterSelect.value : '';
+      const fromDate = document.getElementById('indexFromDate').value;
+      const toDate = document.getElementById('indexToDate').value;
 
       let catalogToRender = [...inventoryCatalog];
       if (currentIndexFilterCode) {
@@ -1129,42 +1199,53 @@
 
       let globalSn = 1;
 
-      if (selectedMonth === 'ALL') {
-        let activeMonths = Array.from(new Set([
-          ...inventoryCatalog.map(i => i.openDate ? i.openDate.substring(0, 7) : '2026-01'),
-          ...transactions.map(t => t.date.substring(0, 7))
-        ])).filter(m => m.startsWith('20')).sort();
-
-        activeMonths.forEach(m => {
-          const [y, mm] = m.split('-').map(Number);
-          const monthName = new Date(y, mm - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
-
-          catalogToRender.forEach(item => {
-            const stats = getItemStats(item.code, m);
-            const itemOpenMonth = item.openDate ? item.openDate.substring(0, 7) : '2026-01';
-
-            if (stats.openQty > 0 || stats.closingQty > 0 || stats.inQty > 0 || stats.outQty > 0 || m === itemOpenMonth) {
-              tbody.innerHTML += `
-                <tr>
-                  <td class="text-center fw-bold">${globalSn++}</td>
-                  <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
-                  <td class="fw-semibold">${item.descEn || '-'}</td>
-                  <td class="fw-semibold">${item.descAr || '-'}</td>
-                  <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td class="text-end text-success fw-bold">${stats.inQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td class="text-end text-danger fw-bold">${stats.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td class="text-end fw-bold text-primary">${stats.closingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td class="text-end fw-bold ${stats.qtyDiff >= 0 ? 'text-success' : 'text-danger'}">${stats.qtyDiff > 0 ? '+' : ''}${stats.qtyDiff.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                  <td class="text-end fw-bold text-success">SAR ${stats.closingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                  <td class="text-end">SAR ${stats.avgPrice.toFixed(2)}</td>
-                  <td class="text-center fw-bold text-primary">${monthName}</td>
-                  <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Entry</button>
-                  </td>
-                </tr>
-              `;
-            }
-          });
+      // Check if Custom Date Range is active
+      if (fromDate && toDate) {
+        catalogToRender.forEach(item => {
+          const stats = getItemCustomRangeStats(item.code, fromDate, toDate);
+          tbody.innerHTML += `
+            <tr>
+              <td class="text-center fw-bold">${globalSn++}</td>
+              <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
+              <td class="fw-semibold">${item.descEn || '-'}</td>
+              <td class="fw-semibold">${item.descAr || '-'}</td>
+              <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end text-success fw-bold">${stats.inQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end text-danger fw-bold">${stats.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold text-primary">${stats.closingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold ${stats.qtyDiff >= 0 ? 'text-success' : 'text-danger'}">${stats.qtyDiff > 0 ? '+' : ''}${stats.qtyDiff.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold text-success">SAR ${stats.closingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              <td class="text-end">SAR ${stats.avgPrice.toFixed(2)}</td>
+              <td class="text-center fw-bold text-dark">${fromDate} to ${toDate}</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Entry</button>
+              </td>
+            </tr>
+          `;
+        });
+      } else if (selectedMonth === 'ALL') {
+        // SINGLE ROW CONSOLIDATED VIEW FOR ALL MONTHS / WHOLE YEAR IN ITEM INDEX
+        catalogToRender.forEach(item => {
+          const stats = getItemStats(item.code, 'ALL');
+          tbody.innerHTML += `
+            <tr>
+              <td class="text-center fw-bold">${globalSn++}</td>
+              <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
+              <td class="fw-semibold">${item.descEn || '-'}</td>
+              <td class="fw-semibold">${item.descAr || '-'}</td>
+              <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end text-success fw-bold">${stats.inQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end text-danger fw-bold">${stats.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold text-primary">${stats.closingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold ${stats.qtyDiff >= 0 ? 'text-success' : 'text-danger'}">${stats.qtyDiff > 0 ? '+' : ''}${stats.qtyDiff.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end fw-bold text-success">SAR ${stats.closingAmt.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+              <td class="text-end">SAR ${stats.avgPrice.toFixed(2)}</td>
+              <td class="text-center fw-bold text-primary">All Months / YTD</td>
+              <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Entry</button>
+              </td>
+            </tr>
+          `;
         });
       } else {
         catalogToRender.forEach((item, index) => {
