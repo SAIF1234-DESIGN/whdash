@@ -157,15 +157,9 @@
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h5 class="fw-bold text-primary mb-0">📦 <span data-i18n="openingSheetTitle">Opening Balance Sheet</span> (<span id="openingTabTitleMonth">October 2026</span>)</h5>
-            <div class="d-flex gap-2 align-items-center">
-              <input type="text" id="openingSearch" class="form-control form-control-sm" data-i18n-placeholder="searchPlaceholder" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()">
-              <select id="openingPageSize" class="form-select form-select-sm" onchange="renderOpeningBalanceTable()" style="width: 80px;">
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-              </select>
-              <button type="button" class="btn btn-sm btn-success fw-semibold" id="addItemTriggerBtn" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <input type="text" id="openingSearch" class="form-control form-control-sm" data-i18n-placeholder="searchPlaceholder" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()" style="width: 220px;">
+              <button type="button" class="btn btn-sm btn-success fw-semibold text-nowrap" id="addItemTriggerBtn" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
             </div>
           </div>
           <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
@@ -638,13 +632,7 @@
       const prevSelected = select.value;
       select.innerHTML = '';
 
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonthNum = now.getMonth() + 1;
-      const currentVal = `${currentYear}-${currentMonthNum < 10 ? '0' + currentMonthNum : currentMonthNum}`;
-
       let activeMonthsSet = new Set();
-      activeMonthsSet.add(currentVal);
 
       Object.keys(explicitOpenBalances).forEach(m => {
         if (m && m.length === 7 && m.startsWith('20')) activeMonthsSet.add(m);
@@ -653,9 +641,11 @@
         if (tx.date && tx.date.length >= 7) activeMonthsSet.add(tx.date.substring(0, 7));
       });
 
-      for (let m = currentMonthNum; m <= 12; m++) {
-        let mStr = m < 10 ? '0' + m : '' + m;
-        activeMonthsSet.add(`${currentYear}-${mStr}`);
+      // Include current system month if empty
+      const now = new Date();
+      const currentVal = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (activeMonthsSet.size === 0) {
+        activeMonthsSet.add(currentVal);
       }
 
       let sortedMonths = Array.from(activeMonthsSet).filter(m => m.startsWith('20')).sort();
@@ -663,31 +653,21 @@
       sortedMonths.forEach(val => {
         const [y, m] = val.split('-').map(Number);
         let label = new Date(y, m - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
-        let status = "";
-
-        if (y < currentYear || (y === currentYear && m < currentMonthNum)) {
-          status = currentLang === 'ar' ? ' (سابق - Past)' : ' (Past)';
-        } else if (y === currentYear && m === currentMonthNum) {
-          status = currentLang === 'ar' ? ' (الحالي - Current)' : ' (Current)';
-        } else {
-          status = currentLang === 'ar' ? ' (مستقبلي - Future)' : ' (Future)';
-        }
-
         let opt = document.createElement('option');
         opt.value = val;
-        opt.text = label + status;
+        opt.text = label;
         select.appendChild(opt);
       });
 
       let optAll = document.createElement('option');
       optAll.value = 'ALL';
-      optAll.text = currentLang === 'ar' ? 'جميع الشهور / YTD (عرض شهري تفصيلي)' : 'All Months / YTD (Month-wise Breakdown)';
+      optAll.text = currentLang === 'ar' ? 'جميع الشهور (عرض تفصيلي حسب الشهر) / All Months' : 'All Months (Month-wise Breakdown)';
       select.appendChild(optAll);
 
       if (prevSelected && Array.from(select.options).some(o => o.value === prevSelected)) {
         select.value = prevSelected;
       } else {
-        select.value = currentVal;
+        select.value = sortedMonths[sortedMonths.length - 1] || currentVal;
       }
     }
 
@@ -729,10 +709,7 @@
       renderAll();
     }
 
-    let inventoryCatalog = [
-      { code: "763225", descEn: "Black Gypsum Screw 3/4*7", descAr: "برغى جبس اسود خشن 3/4*7", openQty: 42000, openAmt: 1207.50 },
-      { code: "749", descEn: "Stickers 95 Noor Khawi", descAr: "استيكرات 95 نور خوي", openQty: 40000, openAmt: 0.00 }
-    ];
+    let inventoryCatalog = [];
     let transactions = [];
     let explicitOpenBalances = {}; // Format: { "2026-08": { "763225": { openQty: 42000, openAmt: 1207.50 } } }
     let earliestOpeningMonth = null;
@@ -766,6 +743,9 @@
       if (confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الصنف ${code}؟` : `Are you sure you want to delete item code ${code}?`)) {
         inventoryCatalog = inventoryCatalog.filter(i => i.code !== code);
         transactions = transactions.filter(t => t.code !== code);
+        Object.keys(explicitOpenBalances).forEach(m => {
+          if (explicitOpenBalances[m]) delete explicitOpenBalances[m][code];
+        });
         populateDynamicMonths();
         renderAll();
         alert(currentLang === 'ar' ? 'تم حذف الصنف بنجاح.' : 'Item successfully deleted.');
@@ -924,6 +904,13 @@
 
       while (simDate < targetDateObj) {
         let mStr = simDate.toISOString().substring(0, 7);
+
+        // Check if an explicit opening balance was uploaded for this intermediate month
+        if (explicitOpenBalances[mStr] && explicitOpenBalances[mStr][itemCode]) {
+          runningQ = explicitOpenBalances[mStr][itemCode].openQty;
+          runningA = explicitOpenBalances[mStr][itemCode].openAmt;
+        }
+
         let monthTxs = transactions.filter(tx => tx.code === itemCode && tx.date.startsWith(mStr));
         monthTxs.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -976,7 +963,6 @@
 
         cumulativeTxs.forEach(tx => {
           if (!tx.date.startsWith(selectedMonth)) {
-            // For past month transactions already accounted in rollover
             return;
           }
           let inQ = parseFloat(tx.inQty) || 0;
@@ -1028,11 +1014,13 @@
         document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerOpenAmtText;
 
         if (selectedMonth === 'ALL') {
-          // Sum across all explicit months
-          Object.keys(explicitOpenBalances).forEach(m => {
-            Object.keys(explicitOpenBalances[m]).forEach(code => {
-              totalQty += explicitOpenBalances[m][code].openQty;
-              totalAmt += explicitOpenBalances[m][code].openAmt;
+          let allMonthsWithData = Object.keys(explicitOpenBalances).sort();
+          if (allMonthsWithData.length === 0) allMonthsWithData = ['2026-01'];
+          allMonthsWithData.forEach(m => {
+            inventoryCatalog.forEach(item => {
+              const rollover = getRolloverStats(item.code, m);
+              totalQty += rollover.openQty;
+              totalAmt += rollover.openAmt;
             });
           });
         } else {
@@ -1046,11 +1034,23 @@
         document.getElementById('bannerTitleLabel').innerText = translations[currentLang].bannerQtyText;
         document.getElementById('bannerAmtTitleLabel').innerText = translations[currentLang].bannerAmtText;
 
-        inventoryCatalog.forEach(item => {
-          const stats = getItemStats(item.code, selectedMonth);
-          totalQty += stats.closingQty;
-          totalAmt += stats.closingAmt;
-        });
+        if (selectedMonth === 'ALL') {
+          let allMonthsWithData = Object.keys(explicitOpenBalances).sort();
+          if (allMonthsWithData.length === 0) allMonthsWithData = ['2026-01'];
+          allMonthsWithData.forEach(m => {
+            inventoryCatalog.forEach(item => {
+              const stats = getItemStats(item.code, m);
+              totalQty += stats.closingQty;
+              totalAmt += stats.closingAmt;
+            });
+          });
+        } else {
+          inventoryCatalog.forEach(item => {
+            const stats = getItemStats(item.code, selectedMonth);
+            totalQty += stats.closingQty;
+            totalAmt += stats.closingAmt;
+          });
+        }
       }
 
       document.getElementById('bannerQty').innerText = totalQty.toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -1067,40 +1067,34 @@
       document.getElementById('openingTabTitleMonth').innerText = masterSelect ? masterSelect.options[masterSelect.selectedIndex].text : '';
 
       const searchQuery = (document.getElementById('openingSearch').value || '').toLowerCase();
-      const pageSize = parseInt(document.getElementById('openingPageSize').value) || 5;
 
       const filtered = inventoryCatalog.filter(item => 
         item.code.toLowerCase().includes(searchQuery) || item.descEn.toLowerCase().includes(searchQuery) || item.descAr.toLowerCase().includes(searchQuery)
       );
 
-      const paginated = filtered.slice(0, pageSize);
-
       if (selectedMonth === 'ALL') {
-        // Month-wise breakdown view across all months with data
         let globalSn = 1;
         let allMonthsWithData = Object.keys(explicitOpenBalances).sort();
         if (allMonthsWithData.length === 0) allMonthsWithData = ['2026-01'];
 
         allMonthsWithData.forEach(m => {
-          paginated.forEach(item => {
-            const dataForMonth = explicitOpenBalances[m] && explicitOpenBalances[m][item.code];
-            if (dataForMonth) {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td class="text-center fw-bold">${globalSn++}</td>
-                <td class="text-center"><span class="badge bg-secondary">${m}</span> <span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
-                <td class="fw-semibold">${item.descEn || '-'}</td>
-                <td class="fw-semibold">${item.descAr || '-'}</td>
-                <td class="text-end">${dataForMonth.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="text-end">SAR ${dataForMonth.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                <td class="text-center"><small class="text-muted">Month-wise</small></td>
-              `;
-              tbody.appendChild(tr);
-            }
+          filtered.forEach(item => {
+            const rollover = getRolloverStats(item.code, m);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="text-center fw-bold">${globalSn++}</td>
+              <td class="text-center"><span class="badge bg-secondary mb-1">${m}</span><br><span class="clickable-item" onclick="goToItemIndex('${item.code}')">${item.code}</span></td>
+              <td class="fw-semibold">${item.descEn || '-'}</td>
+              <td class="fw-semibold">${item.descAr || '-'}</td>
+              <td class="text-end">${rollover.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-end">SAR ${rollover.openAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+              <td class="text-center"><small class="text-muted">Month-wise</small></td>
+            `;
+            tbody.appendChild(tr);
           });
         });
       } else {
-        paginated.forEach((item, index) => {
+        filtered.forEach((item, index) => {
           const rollover = getRolloverStats(item.code, selectedMonth);
           const canDelete = currentUser && currentUser.role === 'admin';
 
@@ -1146,7 +1140,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td class="text-center fw-bold">${globalSn++}</td>
-              <td class="text-center"><span class="badge bg-secondary">${m}</span> <span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
+              <td class="text-center"><span class="badge bg-secondary mb-1">${m}</span><br><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
               <td class="fw-semibold">${item.descEn || '-'}</td>
               <td class="fw-semibold">${item.descAr || '-'}</td>
               <td class="text-end">${stats.openQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -1388,7 +1382,7 @@
 
             if (code && fileMonth && fileMonth.startsWith('20')) {
               if (!explicitOpenBalances[fileMonth]) explicitOpenBalances[fileMonth] = {};
-              // Overwrite opening balance specifically for this month
+              // Overwrite opening balance specifically for this month file upload
               explicitOpenBalances[fileMonth][code] = { openQty, openAmt };
 
               let existing = inventoryCatalog.find(i => i.code === code);
@@ -1408,7 +1402,7 @@
           document.getElementById('masterMonthSelect').value = detectedMonth;
         }
         renderAll();
-        alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح من الملف وتحديث الشهر!` : `Successfully imported ${count} opening balances from file and updated month!`);
+        alert(currentLang === 'ar' ? `تم استيراد ${count} رصيد افتتاحي بنجاح وتحديث الشهر المحدد!` : `Successfully imported ${count} opening balances and updated month!`);
       };
       reader.readAsText(file, 'UTF-8');
     }
