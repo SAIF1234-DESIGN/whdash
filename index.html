@@ -989,6 +989,7 @@
       return { openQty: runningQ, openAmt: runningA };
     }
 
+    // STRICT SEPARATION: Opening Balance & Amount come from Opening Dashboard, Remaining metrics come from Transactions
     function getItemStats(itemCode, selectedMonth) {
       const item = inventoryCatalog.find(i => i.code === itemCode);
       if (!item) return { openQty: 0, openAmt: 0, inQty: 0, outQty: 0, closingQty: 0, closingAmt: 0, avgPrice: 0, qtyDiff: 0 };
@@ -1306,7 +1307,6 @@
       updateBannerTotals();
     }
 
-    // TAB 5 RENDERER: Lowest Inventory with Highest Moving Items
     function renderLowestInventoryTable() {
       const tbody = document.getElementById('lowestInventoryTableBody');
       if (!tbody) return;
@@ -1314,12 +1314,10 @@
 
       const searchQuery = (document.getElementById('lowestInvSearch') ? document.getElementById('lowestInvSearch').value : '').toLowerCase();
 
-      // Calculate stock and outgoing totals for each item
       let itemsWithMetrics = inventoryCatalog.map(item => {
         const stats = getItemStats(item.code, 'ALL');
         const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
-        // Turnover / Velocity Score: Outgoing quantity divided by closing stock (higher means faster moving relative to stock)
-        const closing = Math.max(stats.closingQty, 0.01); // avoid division by zero
+        const closing = Math.max(stats.closingQty, 0.01);
         const velocityScore = stats.outQty / closing;
 
         return {
@@ -1333,19 +1331,17 @@
         };
       });
 
-      // Filter by search query if any
       if (searchQuery) {
         itemsWithMetrics = itemsWithMetrics.filter(i => 
           i.code.toLowerCase().includes(searchQuery) || i.descEn.toLowerCase().includes(searchQuery) || i.descAr.toLowerCase().includes(searchQuery)
         );
       }
 
-      // Sort criteria: Lowest closing stock first, and highest velocity score (highest movers) among lowest stock
       itemsWithMetrics.sort((a, b) => {
         if (a.closingQty !== b.closingQty) {
-          return a.closingQty - b.closingQty; // Ascending stock (lowest first)
+          return a.closingQty - b.closingQty;
         }
-        return b.velocityScore - a.velocityScore; // Descending velocity (highest movers first)
+        return b.velocityScore - a.velocityScore;
       });
 
       let globalSn = 1;
@@ -1608,7 +1604,6 @@
       reader.readAsText(file, 'UTF-8');
     }
 
-    // STRICT NEGATIVE BALANCE & PAST EXISTENCE VALIDATION FOR TRANSACTIONS
     function submitTransaction(e) {
       e.preventDefault();
       const editId = document.getElementById('editTxId').value;
@@ -1634,14 +1629,12 @@
         return;
       }
 
-      // Validate that transaction date is not prior to item's opening date
       const itemOpenDate = found.openDate || '2026-01-01';
       if (dateStr < itemOpenDate) {
         alert(currentLang === 'ar' ? `خطأ: لا يمكن تسجيل حركة قبل تاريخ افتتاح الصنف (${itemOpenDate}).` : `Error: Cannot post entry prior to the item's opening date (${itemOpenDate}).`);
         return;
       }
 
-      // Check available stock up to transaction date for OUTGOING / RETURN (negative balance prevention)
       if (type === 'OUTGOING' || type === 'OUTBOUND') {
         let runningStock = parseFloat(found.openQty) || 0;
         let priorTxs = transactions.filter(tx => tx.code === code && tx.date <= dateStr && (!editId || tx.id != editId));
