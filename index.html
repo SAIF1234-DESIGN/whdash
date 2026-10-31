@@ -29,6 +29,7 @@
       font-weight: 600;
       border: 1px solid #cbd5e1;
       margin-right: 5px;
+      margin-bottom: 5px;
     }
     .table thead th {
       background-color: #1a365d !important;
@@ -147,6 +148,9 @@
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#tabAnalytics" type="button" role="tab" onclick="renderContributionChart()" data-i18n="tab4">4. Top 20 Outgoing Ratio (تحليل الصادر)</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="lowest-inv-tab" data-bs-toggle="pill" data-bs-target="#tabLowestInventory" type="button" role="tab" onclick="renderLowestInventoryTable()" data-i18n="tab5">5. Lowest Stock / High Movers (الأصناف المنخفضة عالية الحركة)</button>
       </li>
     </ul>
 
@@ -334,6 +338,38 @@
         </div>
       </div>
 
+      <!-- TAB 5: LOWEST STOCK WITH HIGHEST MOVERS -->
+      <div class="tab-pane fade" id="tabLowestInventory" role="tabpanel">
+        <div class="card p-3 shadow-sm border-0 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h5 class="fw-bold text-primary mb-0">🚨 <span data-i18n="lowestInvTitle">Lowest Inventory with Highest Moving Items (Reorder Priority)</span></h5>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="text" id="lowestInvSearch" class="form-control form-control-sm" placeholder="🔍 Filter item..." oninput="renderLowestInventoryTable()" style="width: 200px;">
+            </div>
+          </div>
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="table table-bordered table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>SN<br>الرقم</th>
+                  <th>Item Code<br>رمز الصنف</th>
+                  <th>Item Name (English)</th>
+                  <th>Item Name (Arabic)</th>
+                  <th>Current Closing Stock<br>المخزون الحالي</th>
+                  <th>Total Outgoing Qty<br>إجمالي الصادر (الحركة)</th>
+                  <th>Turnover / Velocity Score<br>معدل الحركة وسرعة السحب</th>
+                  <th>Priority Status<br>حالة الأولوية</th>
+                  <th>Actions<br>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="lowestInventoryTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -401,6 +437,7 @@
         tab2: "2. Item Index (سجل الأصناف)",
         tab3: "3. Transactions / Item Card (حركة الأصناف)",
         tab4: "4. Top 20 Outgoing Ratio (تحليل الصادر)",
+        tab5: "5. Lowest Stock / High Movers",
         openingSheetTitle: "Opening Balance Sheet",
         searchPlaceholder: "🔍 Search inventory...",
         addItemBtn: "+ Add New Item",
@@ -444,6 +481,7 @@
         postEntryBtn: "Post Entry Row",
         updateEntryBtn: "Update Entry Row",
         analyticsTitle: "📈 Top 20 Outgoing Items Contribution Ratios",
+        lowestInvTitle: "Lowest Inventory with Highest Moving Items (Reorder Priority)",
         modalTitle: "Add New Inventory Item",
         labelModalCode: "Item Code (رمز الصنف)",
         labelModalDescEn: "Item Description (English)",
@@ -471,6 +509,7 @@
         tab2: "2. سجل الأصناف (Item Index)",
         tab3: "3. حركة الأصناف (Transactions / Item Card)",
         tab4: "4. تحليل الصادر (Top 20 Outgoing Ratio)",
+        tab5: "5. أصناف منخفضة عالية الحركة",
         openingSheetTitle: "جدول الرصيد الافتتاحي",
         searchPlaceholder: "🔍 بحث في المخزون...",
         addItemBtn: "+ إضافة صنف جديد",
@@ -514,6 +553,7 @@
         postEntryBtn: "ترحيل سطر الحركة",
         updateEntryBtn: "تحديث سطر الحركة",
         analyticsTitle: "📈 نسب مساهمة أعلى 20 صنفاً صادراً",
+        lowestInvTitle: "أصناف المخزون المنخفضة ذات الحركة العالية (أولوية إعادة الطلب)",
         modalTitle: "إضافة صنف مخزون جديد",
         labelModalCode: "رمز الصنف (Item Code)",
         labelModalDescEn: "وصف الصنف (إنجليزي - English Description)",
@@ -763,6 +803,9 @@
 
     function switchTab(tabName) {
       activeTabName = tabName;
+      if (tabName === 'lowest') {
+        renderLowestInventoryTable();
+      }
       renderAll();
     }
 
@@ -882,6 +925,7 @@
       renderOpeningBalanceTable();
       renderItemIndexTable();
       renderTransactionTable();
+      renderLowestInventoryTable();
       populateDatalist();
       updateBannerTotals();
     }
@@ -1098,7 +1142,6 @@
       document.getElementById('bannerAmt').innerText = totalAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
     }
 
-    // OPENING BALANCE TABLE: Cumulative per month (Jan = Jan only, Feb = Jan + Feb, Mar = Feb + Mar, All = Single row per item)
     function renderOpeningBalanceTable() {
       const tbody = document.getElementById('openingBalanceTableBody');
       if (!tbody) return;
@@ -1116,9 +1159,7 @@
       let globalSn = 1;
 
       if (selectedMonth === 'ALL') {
-        // Single row per item for ALL months / YTD view without duplication
         filtered.forEach(item => {
-          const rollover = getRolloverStats(item.code, item.openDate ? item.openDate.substring(0, 7) : '2026-01');
           const canDelete = currentUser && currentUser.role === 'admin';
           tbody.innerHTML += `
             <tr>
@@ -1136,7 +1177,6 @@
           `;
         });
       } else {
-        // Cumulative cumulative view: Jan = Jan only, Feb = Jan + Feb items, etc.
         let matchingItems = filtered.filter(item => {
           const itemOpenMonth = item.openDate ? item.openDate.substring(0, 7) : '2026-01';
           return itemOpenMonth <= selectedMonth;
@@ -1167,7 +1207,6 @@
       updateBannerTotals();
     }
 
-    // ITEM INDEX RENDERER: Single row per item when ALL or Custom Date Range is selected
     function renderItemIndexTable() {
       const tbody = document.getElementById('itemIndexTableBody');
       if (!tbody) return;
@@ -1265,6 +1304,77 @@
         });
       }
       updateBannerTotals();
+    }
+
+    // TAB 5 RENDERER: Lowest Inventory with Highest Moving Items
+    function renderLowestInventoryTable() {
+      const tbody = document.getElementById('lowestInventoryTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const searchQuery = (document.getElementById('lowestInvSearch') ? document.getElementById('lowestInvSearch').value : '').toLowerCase();
+
+      // Calculate stock and outgoing totals for each item
+      let itemsWithMetrics = inventoryCatalog.map(item => {
+        const stats = getItemStats(item.code, 'ALL');
+        const displayName = currentLang === 'ar' ? (item.descAr || item.descEn) : (item.descEn || item.descAr);
+        // Turnover / Velocity Score: Outgoing quantity divided by closing stock (higher means faster moving relative to stock)
+        const closing = Math.max(stats.closingQty, 0.01); // avoid division by zero
+        const velocityScore = stats.outQty / closing;
+
+        return {
+          code: item.code,
+          descEn: item.descEn || '',
+          descAr: item.descAr || '',
+          displayName,
+          closingQty: stats.closingQty,
+          outQty: stats.outQty,
+          velocityScore
+        };
+      });
+
+      // Filter by search query if any
+      if (searchQuery) {
+        itemsWithMetrics = itemsWithMetrics.filter(i => 
+          i.code.toLowerCase().includes(searchQuery) || i.descEn.toLowerCase().includes(searchQuery) || i.descAr.toLowerCase().includes(searchQuery)
+        );
+      }
+
+      // Sort criteria: Lowest closing stock first, and highest velocity score (highest movers) among lowest stock
+      itemsWithMetrics.sort((a, b) => {
+        if (a.closingQty !== b.closingQty) {
+          return a.closingQty - b.closingQty; // Ascending stock (lowest first)
+        }
+        return b.velocityScore - a.velocityScore; // Descending velocity (highest movers first)
+      });
+
+      let globalSn = 1;
+      itemsWithMetrics.forEach(item => {
+        let priorityBadge = '';
+        if (item.closingQty <= 100 && item.outQty > 0) {
+          priorityBadge = '<span class="badge bg-danger">🔴 Critical Reorder</span>';
+        } else if (item.closingQty <= 500) {
+          priorityBadge = '<span class="badge bg-warning text-dark">🟡 Low Stock Warning</span>';
+        } else {
+          priorityBadge = '<span class="badge bg-success">🟢 Normal Stock</span>';
+        }
+
+        tbody.innerHTML += `
+          <tr>
+            <td class="text-center fw-bold">${globalSn++}</td>
+            <td class="text-center"><span class="clickable-item" onclick="goToTransactions('${item.code}')">${item.code}</span></td>
+            <td class="fw-semibold">${item.descEn}</td>
+            <td class="fw-semibold">${item.descAr}</td>
+            <td class="text-end fw-bold text-danger">${item.closingQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="text-end fw-bold text-success">${item.outQty.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="text-end">${item.velocityScore.toFixed(2)}x</td>
+            <td class="text-center">${priorityBadge}</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" onclick="goToTransactions('${item.code}')">+ Add Inbound</button>
+            </td>
+          </tr>
+        `;
+      });
     }
 
     function renderTransactionTable() {
@@ -1498,6 +1608,7 @@
       reader.readAsText(file, 'UTF-8');
     }
 
+    // STRICT NEGATIVE BALANCE & PAST EXISTENCE VALIDATION FOR TRANSACTIONS
     function submitTransaction(e) {
       e.preventDefault();
       const editId = document.getElementById('editTxId').value;
@@ -1517,14 +1628,38 @@
         return;
       }
 
-      if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
-        alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' : 'Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
+      const found = inventoryCatalog.find(i => i.code === code);
+      if (!found) {
+        alert(currentLang === 'ar' ? 'خطأ: الصنف غير موجود في سجل المخزون. يرجى إضافته أولاً.' : 'Error: Inventory item does not exist in the past/catalog. Please add the item first.');
         return;
       }
 
-      const found = inventoryCatalog.find(i => i.code === code);
-      if (!found) {
-        alert(currentLang === 'ar' ? 'الرجاء إدخال أو اختيار رمز صنف صحيح.' : 'Please enter or select a valid item code.');
+      // Validate that transaction date is not prior to item's opening date
+      const itemOpenDate = found.openDate || '2026-01-01';
+      if (dateStr < itemOpenDate) {
+        alert(currentLang === 'ar' ? `خطأ: لا يمكن تسجيل حركة قبل تاريخ افتتاح الصنف (${itemOpenDate}).` : `Error: Cannot post entry prior to the item's opening date (${itemOpenDate}).`);
+        return;
+      }
+
+      // Check available stock up to transaction date for OUTGOING / RETURN (negative balance prevention)
+      if (type === 'OUTGOING' || type === 'OUTBOUND') {
+        let runningStock = parseFloat(found.openQty) || 0;
+        let priorTxs = transactions.filter(tx => tx.code === code && tx.date <= dateStr && (!editId || tx.id != editId));
+        priorTxs.sort((a, b) => a.date.localeCompare(b.date));
+
+        priorTxs.forEach(tx => {
+          if (tx.inQty > 0) runningStock += parseFloat(tx.inQty);
+          if (tx.outQty > 0) runningStock -= parseFloat(tx.outQty);
+        });
+
+        if (qty > runningStock) {
+          alert(currentLang === 'ar' ? `خطأ: الكمية المتاحة غير كافية! الرصيد المتاح حتى هذا التاريخ هو ${runningStock.toLocaleString()}. لا يمكن صرف كمية أكبر من المتوفر.` : `Error: Insufficient available stock! Available stock up to this date is ${runningStock.toLocaleString()}. Cannot post outgoing quantity greater than available stock.`);
+          return;
+        }
+      }
+
+      if (type === 'INBOUND' && (!invoiceAmt || invoiceAmt <= 0)) {
+        alert(currentLang === 'ar' ? 'مبلغ الفاتورة إلزامي ويجب أن يكون أكبر من الصفر لحركات الوارد.' : 'Invoice amount is mandatory and must be greater than 0 for INBOUND movements.');
         return;
       }
 
