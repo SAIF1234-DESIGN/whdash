@@ -900,7 +900,7 @@
 
       earliestOpeningMonth = uploadedMonths[0];
 
-      // If there is an explicit open balance for this specific month, return it (supports overwriting per month)
+      // If an explicit override exists for this specific month, return it (month-specific opening balance overwrite)
       if (explicitOpenBalances[targetMonth] && explicitOpenBalances[targetMonth][itemCode]) {
         return explicitOpenBalances[targetMonth][itemCode];
       }
@@ -930,7 +930,6 @@
       while (simDate < targetDateObj) {
         let mStr = simDate.toISOString().substring(0, 7);
         
-        // If an explicit override exists for this simulated month, use it as the base for that month
         if (explicitOpenBalances[mStr] && explicitOpenBalances[mStr][itemCode]) {
           runningQ = explicitOpenBalances[mStr][itemCode].openQty;
           runningA = explicitOpenBalances[mStr][itemCode].openAmt;
@@ -1021,7 +1020,6 @@
       let totalAmt = 0;
 
       if (selectedMonth === 'ALL') {
-        // When ALL is selected, sum unique active months or latest balances
         let allMonths = Object.keys(explicitOpenBalances).sort();
         if (allMonths.length === 0) allMonths = [new Date().toISOString().substring(0, 7)];
         
@@ -1072,7 +1070,7 @@
       let globalSn = 1;
 
       if (selectedMonth === 'ALL') {
-        // Month-wise breakdown display when ALL is selected
+        // Display month-wise breakdown row by row across active months when ALL is selected
         let activeMonths = Object.keys(explicitOpenBalances).sort();
         if (activeMonths.length === 0) {
           activeMonths = [new Date().toISOString().substring(0, 7)];
@@ -1356,7 +1354,7 @@
         existing.openAmt = openAmt;
       }
 
-      // Overwrite or create specific month opening balance
+      // Overwrite opening balance for this specific month
       if (!explicitOpenBalances[targetMonth]) explicitOpenBalances[targetMonth] = {};
       explicitOpenBalances[targetMonth][code] = { openQty, openAmt };
 
@@ -1401,7 +1399,7 @@
             }
 
             if (code && fileMonth && fileMonth.startsWith('20')) {
-              // Overwrite or create specific month opening balance
+              // Overwrite opening balance for this specific month from file upload
               if (!explicitOpenBalances[fileMonth]) explicitOpenBalances[fileMonth] = {};
               explicitOpenBalances[fileMonth][code] = { openQty, openAmt };
 
