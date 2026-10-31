@@ -83,7 +83,7 @@
     
     <!-- Top Summary Banner -->
     <div id="topBanner" class="top-banner mb-3 rounded shadow-sm">
-      <span id="bannerTitleLabel" data-i18n="bannerQtyText">Total Closing Stock Quantity</span> (<span id="bannerMonthLabel">October 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; <span id="bannerAmtTitleLabel" data-i18n="bannerAmtText">Total Closing Amount</span>: SAR <span id="bannerAmt">0.00</span>
+      <span id="bannerTitleLabel" data-i18n="bannerQtyText">Total Closing Stock Quantity</span> (<span id="bannerMonthLabel">April 2026</span>): <span id="bannerQty">0.00</span> &nbsp;|&nbsp; <span id="bannerAmtTitleLabel" data-i18n="bannerAmtText">Total Closing Amount</span>: SAR <span id="bannerAmt">0.00</span>
     </div>
 
     <!-- Company Header Navbar -->
@@ -160,7 +160,7 @@
       <div class="tab-pane fade show active" id="tabOpeningBalance" role="tabpanel">
         <div class="card p-3 shadow-sm border-0 mb-4">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <h5 class="fw-bold text-primary mb-0">📦 <span data-i18n="openingSheetTitle">Opening Balance Sheet</span> (<span id="openingTabTitleMonth">October 2026</span>)</h5>
+            <h5 class="fw-bold text-primary mb-0">📦 <span data-i18n="openingSheetTitle">Opening Balance Sheet</span> (<span id="openingTabTitleMonth">April 2026</span>)</h5>
             <div class="d-flex gap-2 align-items-center flex-nowrap">
               <input type="text" id="openingSearch" class="form-control form-control-sm" data-i18n-placeholder="searchPlaceholder" placeholder="🔍 Search inventory..." oninput="renderOpeningBalanceTable()" style="width: 200px;">
               <button type="button" class="btn btn-sm btn-success fw-semibold text-nowrap" id="addItemTriggerBtn" onclick="openAddModal()" data-i18n="addItemBtn">+ Add New Item</button>
@@ -1001,6 +1001,7 @@
           return { openQty: 0, openAmt: 0, inQty: 0, outQty: 0, closingQty: 0, closingAmt: 0, avgPrice: 0, qtyDiff: 0 };
         }
 
+        // Opening Balance for this month comes from rollover
         const rollover = getRolloverStats(itemCode, selectedMonth);
         const openQty = rollover.openQty;
         const openAmt = rollover.openAmt;
@@ -1011,6 +1012,7 @@
         let cumulativeTxs = transactions.filter(tx => tx.code === itemCode && tx.date <= endOfMonthDate);
         cumulativeTxs.sort((a, b) => a.date.localeCompare(b.date));
 
+        // Get strict month transactions
         let monthTxs = cumulativeTxs.filter(tx => tx.date.startsWith(selectedMonth));
         let mIn = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.inQty) || 0), 0);
         let mOut = monthTxs.reduce((acc, tx) => acc + (parseFloat(tx.outQty) || 0), 0);
